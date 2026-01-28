@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { PaginationDto, PaginatedResponse } from './dto/pagination.dto';
+import { PaginationDto, PaginatedResponse } from './pagination.dto';
 import { PaginationService } from './pagination.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
