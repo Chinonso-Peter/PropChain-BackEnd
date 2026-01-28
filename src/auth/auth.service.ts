@@ -60,7 +60,8 @@ export class AuthService {
     }
 
     // Return user without password
-    const { password: _, ...result } = user;
+    // Return user without password
+    const { password: _, ...result } = user as any;
     return result;
   }
 
@@ -76,11 +77,14 @@ export class AuthService {
         email: `${walletAddress}@wallet.auth`,
         password: Math.random().toString(36),
         walletAddress,
+        firstName: `User-${walletAddress.slice(0, 8)}`,
+        lastName: `Wallet-${walletAddress.slice(0, 8)}`,
       });
     }
 
     // Return user without password
-    const { password: _, ...result } = user;
+    // Return user without password
+    const { password: _, ...result } = user as any;
     return result;
   }
 
@@ -192,12 +196,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '15m',
+      expiresIn: (this.configService.get<string>('JWT_EXPIRES_IN') || '15m') as any,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
+      expiresIn: (this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d') as any,
     });
 
     // Store refresh token in Redis

@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import { RedisService as NestRedisService } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
 
 @Injectable()
 export class RedisService {
-  constructor(@InjectRedis() private readonly redis: Redis) {}
+  private readonly redis: Redis;
+
+  constructor(private readonly redisService: NestRedisService) {
+    this.redis = this.redisService.getOrThrow();
+  }
 
   async get(key: string): Promise<string | null> {
     return await this.redis.get(key);
@@ -46,5 +50,13 @@ export class RedisService {
 
   async hdel(key: string, field: string): Promise<number> {
     return await this.redis.hdel(key, field);
+  }
+
+  async ttl(key: string): Promise<number> {
+    return await this.redis.ttl(key);
+  }
+
+  async incr(key: string): Promise<number> {
+    return await this.redis.incr(key);
   }
 }

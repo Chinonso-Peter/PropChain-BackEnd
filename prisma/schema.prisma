@@ -16,32 +16,77 @@ model User {
   walletAddress String?   @unique @map("wallet_address")
   role          UserRole  @default(USER)
   roleId        String?   @map("role_id")
+  password      String?
+  isVerified    Boolean   @default(false) @map("is_verified")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  properties    Property[]
+  properties           Property[]
   receivedTransactions Transaction[] @relation("UserTransactions")
-  userRole      Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  roleChanges   RoleChangeLog[]
+  userRole             Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  roleChanges          RoleChangeLog[]
+  documents            Document[]
 
+  @@index([email])
+  @@index([walletAddress])
+  @@index([role])
+  @@index([createdAt])
   @@map("users")
 }
 
 model Property {
-  id          String         @id @default(cuid())
-  title       String
-  description String?
-  location    String
-  price       Decimal
-  status      PropertyStatus @default(DRAFT)
-  ownerId     String         @map("owner_id")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  id                String         @id @default(cuid())
+  title             String
+  description       String?
+  location          String
+  price             Decimal
+  status            PropertyStatus @default(DRAFT)
+  ownerId           String         @map("owner_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
 
-  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
+  // Valuation fields
+  estimatedValue    Decimal?       @map("estimated_value")
+  valuationDate     DateTime?      @map("valuation_date")
+  valuationConfidence Float?        @map("valuation_confidence")
+  valuationSource   String?        @map("valuation_source")
+  lastValuationId   String?        @map("last_valuation_id")
+  
+  // Property features for valuation
+  bedrooms          Int?
+  bathrooms         Int?
+  squareFootage     Decimal?       @map("square_footage")
+  yearBuilt         Int?           @map("year_built")
+  propertyType      String?        @map("property_type")
+  lotSize           Decimal?       @map("lot_size")
+  
+  owner             User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+  valuations        PropertyValuation[]
+  documents         Document[]
 
+  @@index([ownerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([location])
   @@map("properties")
+}
+
+model PropertyValuation {
+  id              String   @id @default(cuid())
+  propertyId      String   @map("property_id")
+  estimatedValue  Decimal  @map("estimated_value")
+  confidenceScore Float    @map("confidence_score")
+  valuationDate   DateTime @map("valuation_date")
+  source          String
+  marketTrend     String?  @map("market_trend")
+  featuresUsed    Json?    @map("features_used")
+  rawData         Json?    @map("raw_data")
+  createdAt       DateTime @default(now())
+  
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  @@map("property_valuations")
 }
 
 model Transaction {
@@ -56,9 +101,15 @@ model Transaction {
   createdAt     DateTime          @default(now()) @map("created_at")
   updatedAt     DateTime          @updatedAt @map("updated_at")
 
-  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
-  recipient User? @relation("UserTransactions", fields: [toAddress], references: [walletAddress])
+  property  Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  recipient User?     @relation("UserTransactions", fields: [toAddress], references: [walletAddress])
+  documents Document[]
 
+  @@index([fromAddress])
+  @@index([toAddress])
+  @@index([status])
+  @@index([createdAt])
+  @@index([propertyId])
   @@map("transactions")
 }
 
@@ -174,4 +225,73 @@ enum TransactionType {
   TRANSFER
   ESCROW
   REFUND
+}
+
+enum DocumentType {
+  TITLE_DEED
+  OWNERSHIP_CERTIFICATE
+  INSPECTION_REPORT
+  APPRAISAL
+  INSURANCE
+  TAX_DOCUMENT
+  CONTRACT
+  IDENTITY
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+model Document {
+  id            String         @id @default(cuid())
+  name          String
+  type          DocumentType
+  status        DocumentStatus @default(PENDING)
+  fileUrl       String         @map("file_url")
+  fileHash      String?        @map("file_hash")
+  mimeType      String?        @map("mime_type")
+  fileSize      Int?           @map("file_size")
+  description   String?
+  propertyId    String?        @map("property_id")
+  transactionId String?        @map("transaction_id")
+  uploadedById  String         @map("uploaded_by_id")
+  verifiedAt    DateTime?      @map("verified_at")
+  expiresAt     DateTime?      @map("expires_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  property    Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  uploadedBy  User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([transactionId])
+  @@index([uploadedById])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("documents")
+}
+
+model ApiKey {
+  id           String   @id @default(cuid())
+  name         String
+  key          String   @unique
+  keyPrefix    String   @map("key_prefix")
+  scopes       String[]
+  requestCount BigInt   @default(0) @map("request_count")
+  lastUsedAt   DateTime? @map("last_used_at")
+  isActive     Boolean  @default(true) @map("is_active")
+  rateLimit    Int?     @map("rate_limit")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([keyPrefix])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("api_keys")
 }

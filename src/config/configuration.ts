@@ -44,6 +44,9 @@ export default (): JoiSchemaConfig => ({
   // Rate Limiting
   THROTTLE_TTL: parseInt(process.env.THROTTLE_TTL, 10) || 60,
   THROTTLE_LIMIT: parseInt(process.env.THROTTLE_LIMIT, 10) || 10,
+  
+  // API Key Rate Limiting
+  API_KEY_RATE_LIMIT_PER_MINUTE: parseInt(process.env.API_KEY_RATE_LIMIT_PER_MINUTE, 10) || 60,
 
   // File Upload
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE, 10) || 10 * 1024 * 1024, // 10MB
