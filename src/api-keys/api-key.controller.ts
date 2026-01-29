@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,6 +22,7 @@ import { ApiKeyService } from './api-key.service';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto } from './dto/update-api-key.dto';
 import { ApiKeyResponseDto, CreateApiKeyResponseDto } from './dto/api-key-response.dto';
+import { PaginationQueryDto, PaginatedResponseDto } from '../common/pagination';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('API Keys')
@@ -49,16 +51,36 @@ export class ApiKeyController {
   @Get()
   @ApiOperation({
     summary: 'List all API keys',
-    description: 'Retrieve all API keys with partial key display',
+    description: 'Retrieve all API keys with pagination support and partial key display',
   })
   @ApiResponse({
     status: 200,
     description: 'List of API keys retrieved successfully',
-    type: [ApiKeyResponseDto],
+    schema: {
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/ApiKeyResponseDto' },
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            page: { type: 'number' },
+            limit: { type: 'number' },
+            pages: { type: 'number' },
+            hasNext: { type: 'boolean' },
+            hasPrev: { type: 'boolean' },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAll(): Promise<ApiKeyResponseDto[]> {
-    return this.apiKeyService.findAll();
+  async findAll(
+    @Query() paginationQuery: PaginationQueryDto,
+  ): Promise<ApiKeyResponseDto[] | PaginatedResponseDto<ApiKeyResponseDto>> {
+    return this.apiKeyService.findAll(paginationQuery);
   }
 
   @Get(':id')

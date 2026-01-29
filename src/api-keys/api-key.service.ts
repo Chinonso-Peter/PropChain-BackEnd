@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, UnauthorizedExcepti
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { RedisService } from '../common/services/redis.service';
+import { PaginationService, PaginationQueryDto, PaginatedResponseDto } from '../common/pagination';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto } from './dto/update-api-key.dto';
 import { ApiKeyResponseDto, CreateApiKeyResponseDto } from './dto/api-key-response.dto';
@@ -18,6 +19,7 @@ export class ApiKeyService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly configService: ConfigService,
+    private readonly paginationService: PaginationService,
   ) {
     this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
     this.globalRateLimit = this.configService.get<number>('API_KEY_RATE_LIMIT_PER_MINUTE', 60);
@@ -50,12 +52,29 @@ export class ApiKeyService {
     };
   }
 
-  async findAll(): Promise<ApiKeyResponseDto[]> {
-    const apiKeys = await this.prisma.apiKey.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(paginationQuery?: PaginationQueryDto): Promise<ApiKeyResponseDto[] | PaginatedResponseDto<ApiKeyResponseDto>> {
+    // If no pagination query provided, return all (for backward compatibility)
+    if (!paginationQuery) {
+      const apiKeys = await this.prisma.apiKey.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+      return apiKeys.map(apiKey => this.mapToResponseDto(apiKey));
+    }
 
-    return apiKeys.map(apiKey => this.mapToResponseDto(apiKey));
+    // Paginated response
+    const { skip, take, orderBy } = this.paginationService.getPrismaOptions(paginationQuery, 'createdAt');
+
+    const [apiKeys, total] = await Promise.all([
+      this.prisma.apiKey.findMany({
+        skip,
+        take,
+        orderBy,
+      }),
+      this.prisma.apiKey.count(),
+    ]);
+
+    const data = apiKeys.map(apiKey => this.mapToResponseDto(apiKey));
+    return this.paginationService.formatResponse(data, total, paginationQuery);
   }
 
   async findOne(id: string): Promise<ApiKeyResponseDto> {
