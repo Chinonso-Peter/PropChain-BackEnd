@@ -1,8 +1,8 @@
-import { Injectable, LoggerService as NestLoggerService, Scope } from '@nestjs/common';
+import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 
-@Injectable({ scope: Scope.TRANSIENT })
+@Injectable()
 export class StructuredLoggerService implements NestLoggerService {
   private logger: winston.Logger;
   private context?: string;

@@ -7,7 +7,6 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { Web3Strategy } from './strategies/web3.strategy';
-import { RedisService } from '../common/services/redis.service';
 import { UsersModule } from '../users/users.module';
 import { PrismaService } from '../database/prisma/prisma.service';
 
@@ -33,9 +32,9 @@ import { PrismaService } from '../database/prisma/prisma.service';
     JwtStrategy,
     LocalStrategy,
     Web3Strategy,
-    RedisService,
     PrismaService,
     // NOTE: Removed UserService here because it's now imported via UsersModule
+    // NOTE: Removed RedisService as it's now globally provided by LoggingModule
   ],
   exports: [AuthService],
 })
