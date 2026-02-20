@@ -23,7 +23,7 @@ export class HealthController {
   @ApiResponse({ status: 503, description: 'Service is unhealthy' })
   check() {
     return this.health.check([
-      () => this.dbHealth.isHealthy('database'), 
+      () => this.dbHealth.isHealthy('database'),
       () => this.redisHealth.isHealthy('redis'),
       () => this.http.pingCheck('valuation-provider', 'https://api.valuation-service.com/v1/health'),
     ]);

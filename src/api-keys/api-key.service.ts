@@ -129,12 +129,7 @@ export class ApiKeyService {
     await this.redis.del(`rate_limit:${apiKey.keyPrefix}`);
   }
 
-  async validateApiKey(plainKey: string): Promise<{
-    id: string;
-    name: string;
-    scopes: string[];
-    rateLimit: number;
-  }> {
+  async validateApiKey(plainKey: string): Promise<any> {
     if (!plainKey || !plainKey.startsWith('propchain_live_')) {
       throw new UnauthorizedException('Invalid API key format');
     }
@@ -161,12 +156,7 @@ export class ApiKeyService {
     await this.checkRateLimit(apiKey);
     await this.trackUsage(apiKey.id, keyPrefix);
 
-    return {
-      id: apiKey.id,
-      name: apiKey.name,
-      scopes: apiKey.scopes,
-      rateLimit: apiKey.rateLimit || this.globalRateLimit,
-    };
+    return apiKey; // Return full API key object
   }
 
   private async checkRateLimit(apiKey: any): Promise<void> {

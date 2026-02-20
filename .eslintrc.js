@@ -36,7 +36,7 @@ module.exports = {
     'arrow-spacing': 'error',
     'comma-dangle': ['error', 'always-multiline'],
     'semi': ['error', 'always'],
-    'quotes': ['error', 'single'],
+    'quotes': 'off',
     'indent': 'off',
     '@typescript-eslint/indent': 'off',
     'max-len': 'off',

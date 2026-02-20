@@ -15,7 +15,7 @@ export class XssValidatorConstraint implements ValidatorConstraintInterface {
     if (typeof value !== 'string') {
       return true; // Only validate strings
     }
-    
+
     // Check if value contains potential XSS patterns
     // Instead of sanitizing, we'll check for dangerous patterns
     const dangerousPatterns = [
@@ -29,13 +29,13 @@ export class XssValidatorConstraint implements ValidatorConstraintInterface {
       /data:text\/html/i, // Data HTML URIs
       /onload\s*=|onerror\s*=|onclick\s*=|onmouseover\s*=|onfocus\s*=|onblur\s*=/i, // Event handlers
     ];
-    
+
     for (const pattern of dangerousPatterns) {
       if (pattern.test(value)) {
         return false;
       }
     }
-    
+
     return true;
   }
 
@@ -70,13 +70,13 @@ export function sanitizeXss(input: string): string {
   if (typeof input !== 'string') {
     return input;
   }
-  
+
   // For sanitization, we'll use the xss library with a configuration
   // that removes all HTML tags but preserves plain text
   const options = {
     whiteList: {}, // Allow no HTML tags for maximum security
   };
-  
+
   return xss.filterXSS(input, options);
 }
 

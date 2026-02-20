@@ -34,6 +34,7 @@ import { FilesModule } from './files/files.module';
 import { ValuationModule } from './valuation/valuation.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { DocumentsModule } from './documents/documents.module';
+import { SecurityModule } from './security/security.module';
 
 // Compliance & Security Modules
 import { AuditModule } from './common/audit/audit.module';
@@ -97,6 +98,7 @@ import { AuthRateLimitMiddleware } from './auth/middleware/auth.middleware';
     FilesModule,
     ValuationModule,
     DocumentsModule,
+    SecurityModule, // Add security module
 
     // Compliance & Security
     AuditModule,
@@ -118,5 +120,8 @@ export class AppModule implements NestModule {
       // Auth rate limiting
       .apply(AuthRateLimitMiddleware)
       .forRoutes('/auth*');
+    // Global security middleware
+    // .apply(SecurityMiddleware) // Uncomment when SecurityModule is properly integrated
+    // .forRoutes('*');
   }
 }

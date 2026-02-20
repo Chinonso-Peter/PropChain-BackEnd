@@ -51,6 +51,30 @@ export const configValidationSchema = Joi.object({
   THROTTLE_LIMIT: Joi.number().default(10),
   API_KEY_RATE_LIMIT_PER_MINUTE: Joi.number().default(60),
 
+  // Advanced Rate Limiting
+  RATE_LIMIT_API_PER_MINUTE: Joi.number().default(100),
+  RATE_LIMIT_AUTH_PER_MINUTE: Joi.number().default(5),
+  RATE_LIMIT_EXPENSIVE_PER_MINUTE: Joi.number().default(10),
+  RATE_LIMIT_USER_PER_HOUR: Joi.number().default(1000),
+
+  // IP Blocking
+  MAX_FAILED_ATTEMPTS: Joi.number().default(5),
+  FAILED_ATTEMPT_WINDOW_MS: Joi.number().default(900000), // 15 minutes
+  AUTO_BLOCK_DURATION_MS: Joi.number().default(3600000), // 1 hour
+
+  // DDoS Protection
+  DDOS_THRESHOLD_PER_MINUTE: Joi.number().default(100),
+  DDOS_MITIGATION_ACTION: Joi.string().valid('block_ip', 'rate_limit', 'challenge').default('block_ip'),
+  DDOS_BLOCK_DURATION_MS: Joi.number().default(3600000), // 1 hour
+  DDOS_ATTACK_RETENTION_HOURS: Joi.number().default(168), // 1 week
+
+  // Security Headers
+  SECURITY_HEADERS_ENABLED: Joi.boolean().default(true),
+  CSP_REPORT_URI: Joi.string().uri().optional(),
+  HSTS_MAX_AGE: Joi.number().default(31536000), // 1 year
+  HSTS_INCLUDE_SUBDOMAINS: Joi.boolean().default(true),
+  HSTS_PRELOAD: Joi.boolean().default(true),
+
   // File Upload
   MAX_FILE_SIZE: Joi.number().default(10 * 1024 * 1024), // 10MB
   ALLOWED_FILE_TYPES: Joi.string().default('image/jpeg,image/png,image/webp,application/pdf'),

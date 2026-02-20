@@ -30,6 +30,16 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
+  // Enhanced security headers
+  // const securityHeadersService = app.get(SecurityHeadersService);
+  // const securityHeaders = securityHeadersService.getSecurityHeaders();
+  // Object.entries(securityHeaders).forEach(([key, value]) => {
+  //   app.use((req, res, next) => {
+  //     res.setHeader(key, value);
+  //     next();
+  //   });
+  // });
+
   // CORS configuration
   app.enableCors({
     origin: configService.get('CORS_ORIGIN', '*'),
