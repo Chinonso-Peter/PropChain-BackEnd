@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
+import { HealthCheck, HealthCheckService, HttpHealthIndicator } from '@nestjs/terminus';
 import { DatabaseHealthIndicator } from './indicators/database.health';
 import { RedisHealthIndicator } from './indicators/redis.health';
 import { BlockchainHealthIndicator } from './indicators/blockchain.health';
@@ -10,6 +10,7 @@ import { BlockchainHealthIndicator } from './indicators/blockchain.health';
 export class HealthController {
   constructor(
     private health: HealthCheckService,
+    private http: HttpHealthIndicator,
     private dbHealth: DatabaseHealthIndicator,
     private redisHealth: RedisHealthIndicator,
     private blockchainHealth: BlockchainHealthIndicator,
@@ -21,7 +22,11 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Service is healthy' })
   @ApiResponse({ status: 503, description: 'Service is unhealthy' })
   check() {
-    return this.health.check([() => this.dbHealth.isHealthy('database'), () => this.redisHealth.isHealthy('redis')]);
+    return this.health.check([
+      () => this.dbHealth.isHealthy('database'), 
+      () => this.redisHealth.isHealthy('redis'),
+      () => this.http.pingCheck('valuation-provider', 'https://api.valuation-service.com/v1/health'),
+    ]);
   }
 
   @Get('detailed')

@@ -59,6 +59,10 @@ export enum ErrorCode {
   BUSINESS_RULE_VIOLATION = 'BUSINESS_RULE_VIOLATION',
   OPERATION_NOT_ALLOWED = 'OPERATION_NOT_ALLOWED',
   INVALID_STATE = 'INVALID_STATE',
+
+  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
+  EXTERNAL_API_ERROR = 'EXTERNAL_API_ERROR',
+  CIRCUIT_OPEN = 'CIRCUIT_OPEN',
 }
 
 export const ErrorMessages: Record<ErrorCode, string> = {
@@ -110,4 +114,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.BUSINESS_RULE_VIOLATION]: 'This operation violates business rules',
   [ErrorCode.OPERATION_NOT_ALLOWED]: 'This operation is not allowed',
   [ErrorCode.INVALID_STATE]: 'The resource is in an invalid state for this operation',
+
+  [ErrorCode.SERVICE_UNAVAILABLE]: 'The requested service is temporarily unavailable.',
+  [ErrorCode.CIRCUIT_OPEN]: 'Circuit breaker is open. Please try again later.',
 };

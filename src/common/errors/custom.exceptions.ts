@@ -125,3 +125,9 @@ export class OperationNotAllowedException extends BaseCustomException {
     super(ErrorCode.OPERATION_NOT_ALLOWED, message, undefined, HttpStatus.FORBIDDEN);
   }
 }
+
+export class ServiceUnavailableException extends BaseCustomException {
+  constructor(message?: string) {
+    super(ErrorCode.SERVICE_UNAVAILABLE, message, undefined, HttpStatus.SERVICE_UNAVAILABLE);
+  }
+}
