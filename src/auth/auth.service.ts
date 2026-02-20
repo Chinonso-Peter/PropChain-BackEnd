@@ -129,7 +129,24 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string) {
+  async logout(userId: string, accessToken?: string) {
+    // Blacklist the current access token
+    if (accessToken) {
+      const tokenPayload = await this.jwtService.decode(accessToken);
+      if (tokenPayload && typeof tokenPayload === 'object' && 'jti' in tokenPayload) {
+        const jti = tokenPayload.jti;
+        const expiry = tokenPayload.exp;
+        if (jti && expiry) {
+          const ttl = expiry - Math.floor(Date.now() / 1000);
+          if (ttl > 0) {
+            await this.redisService.setex(`blacklisted_token:${jti}`, ttl, userId);
+            this.logger.logAuth('Access token blacklisted', { userId, jti });
+          }
+        }
+      }
+    }
+    
+    // Remove refresh token
     await this.redisService.del(`refresh_token:${userId}`);
     this.logger.logAuth('User logged out successfully', { userId });
     return { message: 'Logged out successfully' };
@@ -195,8 +212,71 @@ export class AuthService {
     return { message: 'Email verified successfully' };
   }
 
+  async isTokenBlacklisted(jti: string): Promise<boolean> {
+    const blacklisted = await this.redisService.get(`blacklisted_token:${jti}`);
+    return blacklisted !== null;
+  }
+
+  async getActiveSessions(userId: string): Promise<any[]> {
+    const sessionKeys = await this.redisService.keys(`active_session:${userId}:*`);
+    const sessions = [];
+    
+    for (const key of sessionKeys) {
+      const sessionData = await this.redisService.get(key);
+      if (sessionData) {
+        sessions.push(JSON.parse(sessionData));
+      }
+    }
+    
+    return sessions;
+  }
+
+  async getSessionById(userId: string, sessionId: string): Promise<any> {
+    const sessionData = await this.redisService.get(`active_session:${userId}:${sessionId}`);
+    return sessionData ? JSON.parse(sessionData) : null;
+  }
+
+  async getAllUserSessions(userId: string): Promise<any[]> {
+    const sessions = await this.getActiveSessions(userId);
+    return sessions.map(session => ({
+      ...session,
+      isActive: true,
+      expiresIn: this.getSessionExpiry(session.createdAt)
+    }));
+  }
+
+  async invalidateAllSessions(userId: string): Promise<void> {
+    const sessionKeys = await this.redisService.keys(`active_session:${userId}:*`);
+    for (const key of sessionKeys) {
+      await this.redisService.del(key);
+    }
+    this.logger.logAuth('All sessions invalidated', { userId });
+  }
+
+  async getConcurrentSessions(userId: string): Promise<number> {
+    const sessions = await this.getActiveSessions(userId);
+    return sessions.length;
+  }
+
+  private getSessionExpiry(createdAt: string): number {
+    const created = new Date(createdAt);
+    const sessionTimeout = this.configService.get<number>('SESSION_TIMEOUT', 3600) * 1000;
+    const expiry = created.getTime() + sessionTimeout;
+    return Math.max(0, expiry - Date.now());
+  }
+
+  async invalidateSession(userId: string, sessionId: string): Promise<void> {
+    await this.redisService.del(`active_session:${userId}:${sessionId}`);
+    this.logger.logAuth('Session invalidated', { userId, sessionId });
+  }
+
   private generateTokens(user: any) {
-    const payload = { sub: user.id, email: user.email };
+    const jti = uuidv4(); // JWT ID for blacklisting
+    const payload = { 
+      sub: user.id, 
+      email: user.email,
+      jti: jti
+    };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -209,8 +289,17 @@ export class AuthService {
     });
 
     this.redisService.set(`refresh_token:${user.id}`, refreshToken);
+    
+    // Store active session
+    const sessionExpiry = this.configService.get<number>('SESSION_TIMEOUT', 3600);
+    this.redisService.setex(`active_session:${user.id}:${jti}`, sessionExpiry, JSON.stringify({
+      userId: user.id,
+      createdAt: new Date().toISOString(),
+      userAgent: 'unknown', // Would be captured from request in real implementation
+      ip: 'unknown'
+    }));
 
-    this.logger.debug('Generated new tokens for user', { userId: user.id });
+    this.logger.debug('Generated new tokens for user', { userId: user.id, jti });
 
     return {
       access_token: accessToken,
@@ -232,11 +321,11 @@ export class AuthService {
     await this.redisService.set(`email_verification:${verificationToken}`, JSON.stringify({ userId, expiry }));
 
     this.logger.log(`Verification email sent to ${email}`, { userId });
-    console.log(`Verification email sent to ${email} with token: ${verificationToken}`);
+    this.logger.debug(`Verification token generated for ${email}`, { userId });
   }
 
   private async sendPasswordResetEmail(email: string, resetToken: string) {
     this.logger.log(`Password reset email sent to ${email}`);
-    console.log(`Password reset email sent to ${email} with token: ${resetToken}`);
+    this.logger.debug(`Password reset token generated for ${email}`);
   }
 }

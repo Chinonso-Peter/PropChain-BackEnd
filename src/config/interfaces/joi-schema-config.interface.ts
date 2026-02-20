@@ -71,6 +71,22 @@ export interface JoiSchemaConfig {
   // Security
   BCRYPT_ROUNDS: number;
   SESSION_SECRET: string;
+  
+  // Password Security
+  PASSWORD_MIN_LENGTH: number;
+  PASSWORD_REQUIRE_SPECIAL_CHARS: boolean;
+  PASSWORD_REQUIRE_NUMBERS: boolean;
+  PASSWORD_REQUIRE_UPPERCASE: boolean;
+  PASSWORD_HISTORY_COUNT: number;
+  PASSWORD_EXPIRY_DAYS: number;
+  
+  // Authentication Security
+  JWT_BLACKLIST_ENABLED: boolean;
+  LOGIN_MAX_ATTEMPTS: number;
+  LOGIN_LOCKOUT_DURATION: number;
+  SESSION_TIMEOUT: number;
+  MFA_ENABLED: boolean;
+  MFA_CODE_EXPIRY: number;
 
   // Development
   MOCK_BLOCKCHAIN: boolean;

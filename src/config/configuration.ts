@@ -80,6 +80,22 @@ export default (): JoiSchemaConfig => ({
   // Security
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS, 10) || 12,
   SESSION_SECRET: process.env.SESSION_SECRET || 'your-session-secret-key',
+  
+  // Password Security
+  PASSWORD_MIN_LENGTH: parseInt(process.env.PASSWORD_MIN_LENGTH, 10) || 12,
+  PASSWORD_REQUIRE_SPECIAL_CHARS: process.env.PASSWORD_REQUIRE_SPECIAL_CHARS === 'true',
+  PASSWORD_REQUIRE_NUMBERS: process.env.PASSWORD_REQUIRE_NUMBERS === 'true',
+  PASSWORD_REQUIRE_UPPERCASE: process.env.PASSWORD_REQUIRE_UPPERCASE === 'true',
+  PASSWORD_HISTORY_COUNT: parseInt(process.env.PASSWORD_HISTORY_COUNT, 10) || 5,
+  PASSWORD_EXPIRY_DAYS: parseInt(process.env.PASSWORD_EXPIRY_DAYS, 10) || 90,
+  
+  // Authentication Security
+  JWT_BLACKLIST_ENABLED: process.env.JWT_BLACKLIST_ENABLED === 'true',
+  LOGIN_MAX_ATTEMPTS: parseInt(process.env.LOGIN_MAX_ATTEMPTS, 10) || 5,
+  LOGIN_LOCKOUT_DURATION: parseInt(process.env.LOGIN_LOCKOUT_DURATION, 10) || 900,
+  SESSION_TIMEOUT: parseInt(process.env.SESSION_TIMEOUT, 10) || 3600,
+  MFA_ENABLED: process.env.MFA_ENABLED === 'true',
+  MFA_CODE_EXPIRY: parseInt(process.env.MFA_CODE_EXPIRY, 10) || 300,
 
   // Development
   MOCK_BLOCKCHAIN: process.env.MOCK_BLOCKCHAIN === 'true',

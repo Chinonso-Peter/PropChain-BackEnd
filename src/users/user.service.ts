@@ -1,14 +1,26 @@
-import { Injectable, NotFoundException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
+import { PasswordValidator } from '../common/validators/password.validator';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly passwordValidator: PasswordValidator
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     const { email, password, walletAddress } = createUserDto;
+
+    // Validate password strength
+    if (password) {
+      const passwordValidation = this.passwordValidator.validatePassword(password);
+      if (!passwordValidation.valid) {
+        throw new BadRequestException(`Password validation failed: ${passwordValidation.errors.join(', ')}`);
+      }
+    }
 
     // Check if user already exists
     const existingUser = await this.prisma.user.findFirst({
@@ -22,7 +34,8 @@ export class UserService {
     }
 
     // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const bcryptRounds = this.passwordValidator['configService'].get<number>('BCRYPT_ROUNDS', 12);
+    const hashedPassword = await bcrypt.hash(password, bcryptRounds);
 
     // Create the user
     const user = await this.prisma.user.create({
@@ -62,7 +75,15 @@ export class UserService {
   }
 
   async updatePassword(userId: string, newPassword: string) {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Validate password strength
+    const passwordValidation = this.passwordValidator.validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      throw new BadRequestException(`Password validation failed: ${passwordValidation.errors.join(', ')}`);
+    }
+
+    // Get bcrypt rounds from config
+    const bcryptRounds = this.passwordValidator['configService'].get<number>('BCRYPT_ROUNDS', 12);
+    const hashedPassword = await bcrypt.hash(newPassword, bcryptRounds);
     return this.prisma.user.update({
       where: { id: userId },
       data: { password: hashedPassword },

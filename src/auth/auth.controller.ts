@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Req, Get, UseGuards, HttpCode, HttpStatus, Put, Param } from '@nestjs/common';
+import { Controller, Post, Body, Req, Get, UseGuards, HttpCode, HttpStatus, Put, Param, Delete } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LoginAttemptsGuard } from './guards/login-attempts.guard';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import {
   LoginDto,
@@ -29,12 +30,16 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(LoginAttemptsGuard)
   @ApiOperation({ summary: 'Login user with email and password' })
   @ApiResponse({ status: 200, description: 'Login successful.' })
   @ApiResponse({ status: 401, description: 'Invalid credentials.', type: ErrorResponseDto })
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @Req() req: Request) {
+    return this.authService.login({
+      email: loginDto.email,
+      password: loginDto.password
+    });
   }
 
   @Post('web3-login')
@@ -65,7 +70,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request) {
     const user = req['user'] as any;
-    return this.authService.logout(user.id);
+    const authHeader = req.headers['authorization'];
+    const accessToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    return this.authService.logout(user.id, accessToken);
   }
 
   @Post('forgot-password')
@@ -91,5 +98,37 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired verification token.', type: ErrorResponseDto })
   async verifyEmail(@Param() params: VerifyEmailParamsDto) {
     return this.authService.verifyEmail(params.token);
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get all active sessions for current user' })
+  @ApiResponse({ status: 200, description: 'Sessions retrieved successfully.' })
+  @HttpCode(HttpStatus.OK)
+  async getSessions(@Req() req: Request) {
+    const user = req['user'] as any;
+    return this.authService.getAllUserSessions(user.id);
+  }
+
+  @Delete('sessions/:sessionId')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Invalidate a specific session' })
+  @ApiResponse({ status: 200, description: 'Session invalidated successfully.' })
+  @HttpCode(HttpStatus.OK)
+  async invalidateSession(@Req() req: Request, @Param('sessionId') sessionId: string) {
+    const user = req['user'] as any;
+    await this.authService.invalidateSession(user.id, sessionId);
+    return { message: 'Session invalidated successfully' };
+  }
+
+  @Delete('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Invalidate all sessions for current user' })
+  @ApiResponse({ status: 200, description: 'All sessions invalidated successfully.' })
+  @HttpCode(HttpStatus.OK)
+  async invalidateAllSessions(@Req() req: Request) {
+    const user = req['user'] as any;
+    await this.authService.invalidateAllSessions(user.id);
+    return { message: 'All sessions invalidated successfully' };
   }
 }

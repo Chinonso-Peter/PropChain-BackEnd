@@ -7,6 +7,9 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { Web3Strategy } from './strategies/web3.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LoginAttemptsGuard } from './guards/login-attempts.guard';
+import { MfaModule } from './mfa/mfa.module';
 import { UsersModule } from '../users/users.module';
 import { PrismaService } from '../database/prisma/prisma.service';
 
@@ -25,6 +28,7 @@ import { PrismaService } from '../database/prisma/prisma.service';
         },
       }),
     }),
+    MfaModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -33,6 +37,14 @@ import { PrismaService } from '../database/prisma/prisma.service';
     LocalStrategy,
     Web3Strategy,
     PrismaService,
+    {
+      provide: 'JwtAuthGuard',
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: 'LoginAttemptsGuard',
+      useClass: LoginAttemptsGuard,
+    },
     // NOTE: Removed UserService here because it's now imported via UsersModule
     // NOTE: Removed RedisService as it's now globally provided by LoggingModule
   ],
