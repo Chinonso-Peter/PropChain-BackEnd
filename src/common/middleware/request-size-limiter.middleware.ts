@@ -17,17 +17,13 @@ export class RequestSizeLimiterMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     // Check URL length
     if (req.url.length > this.maxUrlLength) {
-      throw new BadRequestException(
-        `Request URL exceeds maximum allowed length of ${this.maxUrlLength} characters`
-      );
+      throw new BadRequestException(`Request URL exceeds maximum allowed length of ${this.maxUrlLength} characters`);
     }
 
     // Check number of headers
     const headerCount = Object.keys(req.headers).length;
     if (headerCount > this.maxHeadersCount) {
-      throw new BadRequestException(
-        `Request exceeds maximum allowed headers count of ${this.maxHeadersCount}`
-      );
+      throw new BadRequestException(`Request exceeds maximum allowed headers count of ${this.maxHeadersCount}`);
     }
 
     // Check content length header if present
@@ -35,9 +31,7 @@ export class RequestSizeLimiterMiddleware implements NestMiddleware {
     if (contentLength) {
       const size = parseInt(contentLength, 10);
       if (size > this.maxRequestSize) {
-        throw new BadRequestException(
-          `Request body exceeds maximum allowed size of ${this.maxRequestSize} bytes`
-        );
+        throw new BadRequestException(`Request body exceeds maximum allowed size of ${this.maxRequestSize} bytes`);
       }
     }
 
@@ -48,9 +42,7 @@ export class RequestSizeLimiterMiddleware implements NestMiddleware {
         receivedSize += chunk.length;
         if (receivedSize > this.maxRequestSize) {
           req.destroy();
-          throw new BadRequestException(
-            `Request body exceeds maximum allowed size of ${this.maxRequestSize} bytes`
-          );
+          throw new BadRequestException(`Request body exceeds maximum allowed size of ${this.maxRequestSize} bytes`);
         }
       });
     }

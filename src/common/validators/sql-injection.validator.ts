@@ -1,4 +1,9 @@
-import { registerDecorator, ValidationOptions, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import {
+  registerDecorator,
+  ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 
 // Common SQL injection patterns
 const SQL_INJECTION_PATTERNS = [
@@ -40,10 +45,10 @@ export class SqlInjectionValidatorConstraint implements ValidatorConstraintInter
  * Decorator to validate input against SQL injection
  */
 export function IsNotSqlInjection(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: Record<string, any>, propertyName: string) {
     registerDecorator({
       target: object.constructor,
-      propertyName: propertyName,
+      propertyName,
       options: validationOptions,
       constraints: [],
       validator: SqlInjectionValidatorConstraint,
