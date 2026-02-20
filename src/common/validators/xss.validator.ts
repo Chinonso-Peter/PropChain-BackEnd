@@ -4,7 +4,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import xss from 'xss';
+import * as xss from 'xss';
 
 /**
  * Custom validator constraint for XSS protection
@@ -15,10 +15,28 @@ export class XssValidatorConstraint implements ValidatorConstraintInterface {
     if (typeof value !== 'string') {
       return true; // Only validate strings
     }
-
-    // Check if sanitized value differs from original (indicating potential XSS)
-    const sanitized = xss(value);
-    return sanitized === value;
+    
+    // Check if value contains potential XSS patterns
+    // Instead of sanitizing, we'll check for dangerous patterns
+    const dangerousPatterns = [
+      /<script[\s>]/i, // Script tags
+      /<iframe[\s>]/i, // Iframe tags
+      /<object[\s>]/i, // Object tags
+      /<embed[\s>]/i, // Embed tags
+      /<form[\s>].*?javascript:/i, // Form with JS
+      /javascript:/i, // JavaScript protocol
+      /vbscript:/i, // VBScript protocol
+      /data:text\/html/i, // Data HTML URIs
+      /onload\s*=|onerror\s*=|onclick\s*=|onmouseover\s*=|onfocus\s*=|onblur\s*=/i, // Event handlers
+    ];
+    
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(value)) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   defaultMessage() {
@@ -49,7 +67,17 @@ export function sanitizeXss(input: string): string {
     return input;
   }
 
-  return xss(input);
+  if (typeof input !== 'string') {
+    return input;
+  }
+  
+  // For sanitization, we'll use the xss library with a configuration
+  // that removes all HTML tags but preserves plain text
+  const options = {
+    whiteList: {}, // Allow no HTML tags for maximum security
+  };
+  
+  return xss.filterXSS(input, options);
 }
 
 /**
