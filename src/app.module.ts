@@ -4,7 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
 import { BullModule } from '@nestjs/bull';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 
 // Core & Database
 import { PrismaModule } from './database/prisma/prisma.module';
@@ -31,6 +31,11 @@ import { FilesModule } from './files/files.module';
 import { ValuationModule } from './valuation/valuation.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { DocumentsModule } from './documents/documents.module';
+
+// Compliance & Security Modules
+import { AuditModule } from './common/audit/audit.module';
+import { RbacModule } from './rbac/rbac.module';
+import { AuditController } from './common/controllers/audit.controller';
 
 // Middleware
 import { AuthRateLimitMiddleware } from './auth/middleware/auth.middleware';
@@ -84,6 +89,13 @@ import { AuthRateLimitMiddleware } from './auth/middleware/auth.middleware';
     FilesModule,
     ValuationModule,
     DocumentsModule,
+    
+    // Compliance & Security
+    AuditModule,
+    RbacModule,
+  ],
+  controllers: [
+    AuditController, // Add the audit controller
   ],
   providers: [
     {

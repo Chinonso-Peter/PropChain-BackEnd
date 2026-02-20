@@ -7,6 +7,7 @@ export enum Resource {
   AUDIT = 'audit',
   BLOCKCHAIN = 'blockchain',
   FILE = 'file',
+  DOCUMENT = 'document',
   HEALTH = 'health',
   CONFIG = 'config',
 }
