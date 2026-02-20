@@ -1,4 +1,9 @@
-import { registerDecorator, ValidationOptions, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import {
+  registerDecorator,
+  ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 import { HttpStatus } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,7 +20,7 @@ const ALLOWED_MIME_TYPES = [
   'image/tiff',
   'image/bmp',
   'image/x-icon',
-  
+
   // Documents
   'application/pdf',
   'application/msword',
@@ -153,10 +158,10 @@ export class FileUploadValidatorConstraint implements ValidatorConstraintInterfa
  * Decorator to validate uploaded files
  */
 export function IsValidFileUpload(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: Record<string, any>, propertyName: string) {
     registerDecorator({
       target: object.constructor,
-      propertyName: propertyName,
+      propertyName,
       options: validationOptions,
       constraints: [],
       validator: FileUploadValidatorConstraint,
@@ -170,7 +175,7 @@ export function IsValidFileUpload(validationOptions?: ValidationOptions) {
 export async function validateFileUpload(
   file: Express.Multer.File,
   allowedMimeTypes: string[] = ALLOWED_MIME_TYPES,
-  maxSize: number = MAX_FILE_SIZE
+  maxSize: number = MAX_FILE_SIZE,
 ): Promise<{ isValid: boolean; errors: string[] }> {
   const errors: string[] = [];
 
@@ -285,9 +290,11 @@ async function containsMaliciousContent(buffer: Buffer): Promise<boolean> {
 /**
  * Get file type information
  */
-export async function getFileTypeInfo(buffer: Buffer): Promise<{ mimeType: string; extension: string; isValid: boolean }> {
+export async function getFileTypeInfo(
+  buffer: Buffer,
+): Promise<{ mimeType: string; extension: string; isValid: boolean }> {
   const detectedType = await fileTypeFromBuffer(buffer);
-  
+
   if (!detectedType) {
     return { mimeType: 'unknown', extension: '', isValid: false };
   }
@@ -295,6 +302,6 @@ export async function getFileTypeInfo(buffer: Buffer): Promise<{ mimeType: strin
   return {
     mimeType: detectedType.mime,
     extension: `.${detectedType.ext}`,
-    isValid: ALLOWED_MIME_TYPES.includes(detectedType.mime)
+    isValid: ALLOWED_MIME_TYPES.includes(detectedType.mime),
   };
 }

@@ -27,7 +27,6 @@ import { Action } from '../../rbac/enums/action.enum';
 import { RequireScopes } from '../decorators/require-scopes.decorator';
 import { AuditInterceptor } from '../interceptors/audit.interceptor';
 
-
 @ApiTags('Audit & Compliance')
 @Controller('audit')
 @UseGuards(JwtAuthGuard, RbacGuard)

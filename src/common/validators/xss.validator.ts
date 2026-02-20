@@ -1,4 +1,9 @@
-import { registerDecorator, ValidationOptions, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import {
+  registerDecorator,
+  ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+} from 'class-validator';
 import xss from 'xss';
 
 /**
@@ -10,7 +15,7 @@ export class XssValidatorConstraint implements ValidatorConstraintInterface {
     if (typeof value !== 'string') {
       return true; // Only validate strings
     }
-    
+
     // Check if sanitized value differs from original (indicating potential XSS)
     const sanitized = xss(value);
     return sanitized === value;
@@ -25,10 +30,10 @@ export class XssValidatorConstraint implements ValidatorConstraintInterface {
  * Decorator to validate and sanitize input against XSS attacks
  */
 export function IsXssSafe(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: Record<string, any>, propertyName: string) {
     registerDecorator({
       target: object.constructor,
-      propertyName: propertyName,
+      propertyName,
       options: validationOptions,
       constraints: [],
       validator: XssValidatorConstraint,
@@ -43,7 +48,7 @@ export function sanitizeXss(input: string): string {
   if (typeof input !== 'string') {
     return input;
   }
-  
+
   return xss(input);
 }
 
