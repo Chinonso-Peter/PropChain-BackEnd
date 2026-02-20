@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../src/common/services/redis.service';
 import { CreateUserDto } from '../../src/users/dto/create-user.dto';
+import { StructuredLoggerService } from '../../src/common/logging/logger.service';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -46,6 +47,7 @@ describe('AuthService', () => {
             del: jest.fn(),
           },
         },
+        StructuredLoggerService,
       ],
     }).compile();
 
