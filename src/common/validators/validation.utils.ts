@@ -14,7 +14,7 @@ import {
  * Validates that a string is a valid email address
  */
 export function IsEmailCustom(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isEmailCustom',
       target: object.constructor,
@@ -38,7 +38,7 @@ export function IsEmailCustom(validationOptions?: ValidationOptions) {
  * Validates that a string is a valid UUID
  */
 export function IsUUIDCustom(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isUUIDCustom',
       target: object.constructor,
@@ -62,7 +62,7 @@ export function IsUUIDCustom(validationOptions?: ValidationOptions) {
  * Validates that a string is a valid URL
  */
 export function IsUrlCustom(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isUrlCustom',
       target: object.constructor,
@@ -90,7 +90,7 @@ export function IsUrlCustom(validationOptions?: ValidationOptions) {
  * Validates that a value is a positive number
  */
 export function IsPositiveNumber(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isPositiveNumber',
       target: object.constructor,
@@ -112,7 +112,7 @@ export function IsPositiveNumber(validationOptions?: ValidationOptions) {
  * Validates that a value is a non-negative number
  */
 export function IsNonNegativeNumber(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isNonNegativeNumber',
       target: object.constructor,
@@ -134,7 +134,7 @@ export function IsNonNegativeNumber(validationOptions?: ValidationOptions) {
  * Validates that a string contains only alphanumeric characters
  */
 export function IsAlphanumericCustom(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isAlphanumericCustom',
       target: object.constructor,
@@ -156,7 +156,7 @@ export function IsAlphanumericCustom(validationOptions?: ValidationOptions) {
  * Validates that a string matches a specific pattern
  */
 export function MatchesCustom(pattern: RegExp, validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'matchesCustom',
       target: object.constructor,
@@ -178,7 +178,7 @@ export function MatchesCustom(pattern: RegExp, validationOptions?: ValidationOpt
  * Validates that an array has unique elements
  */
 export function ArrayUniqueCustom(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'arrayUniqueCustom',
       target: object.constructor,
@@ -201,7 +201,7 @@ export function ArrayUniqueCustom(validationOptions?: ValidationOptions) {
  * Validates that a date is in the future
  */
 export function IsFutureDate(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isFutureDate',
       target: object.constructor,
@@ -224,7 +224,7 @@ export function IsFutureDate(validationOptions?: ValidationOptions) {
  * Validates that a date is in the past
  */
 export function IsPastDate(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isPastDate',
       target: object.constructor,
@@ -247,7 +247,7 @@ export function IsPastDate(validationOptions?: ValidationOptions) {
  * Validates that a value is within a specific range
  */
 export function IsInRange(min: number, max: number, validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isInRange',
       target: object.constructor,
@@ -269,7 +269,7 @@ export function IsInRange(min: number, max: number, validationOptions?: Validati
  * Validates that a string is a valid phone number
  */
 export function IsPhoneNumber(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isPhoneNumber',
       target: object.constructor,
@@ -294,7 +294,7 @@ export function IsPhoneNumber(validationOptions?: ValidationOptions) {
  * Validates that a string is a valid credit card number
  */
 export function IsCreditCard(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isCreditCard',
       target: object.constructor,
