@@ -118,7 +118,7 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch(async (error) => {
+bootstrap().catch(async error => {
   // Use a temporary logger since the app hasn't started
   const tempLogger = new (await import('./common/logging/logger.service')).StructuredLoggerService(null);
   tempLogger.setContext('Main');

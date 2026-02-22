@@ -93,6 +93,46 @@ export class PropertyFilterDto {
   @IsOptional()
   @IsString({ message: 'Owner ID must be a string' })
   ownerId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum bathrooms',
+    example: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'minBathrooms must be a number' })
+  @Min(0, { message: 'minBathrooms cannot be negative' })
+  minBathrooms?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum bathrooms',
+    example: 4,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'maxBathrooms must be a number' })
+  @Min(0, { message: 'maxBathrooms cannot be negative' })
+  maxBathrooms?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum square footage',
+    example: 500,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'minArea must be a number' })
+  @Min(0, { message: 'minArea cannot be negative' })
+  minArea?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum square footage',
+    example: 5000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'maxArea must be a number' })
+  @Min(0, { message: 'maxArea cannot be negative' })
+  maxArea?: number;
 }
 
 export class PropertyQueryDto extends IntersectionType(PropertyFilterDto, IntersectionType(PaginationDto, SortDto)) {}
