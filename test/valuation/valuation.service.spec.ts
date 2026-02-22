@@ -6,12 +6,9 @@ import { PrismaService } from '../../src/database/prisma/prisma.service';
 import { ValuationService } from '../../src/valuation/valuation.service';
 import { CacheService } from '../../src/common/services/cache.service';
 import { RedisService } from '../../src/common/services/redis.service';
-import { Decimal } from '@prisma/client/runtime/library';
 
 describe('ValuationService', () => {
   let service: ValuationService;
-  let configService: ConfigService;
-  let prismaService: PrismaService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -76,8 +73,6 @@ describe('ValuationService', () => {
     }).compile();
 
     service = module.get<ValuationService>(ValuationService);
-    configService = module.get<ConfigService>(ConfigService);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   it('should be defined', () => {

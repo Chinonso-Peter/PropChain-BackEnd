@@ -8,7 +8,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  async canActivate(context: any): Promise<boolean> {
+  override async canActivate(context: any): Promise<boolean> {
     const result = (await super.canActivate(context)) as boolean;
 
     if (result) {

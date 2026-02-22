@@ -33,7 +33,7 @@ describe('User DTOs', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].property).toBe('email');
+      expect(errors[0]!.property).toBe('email');
     });
 
     it('should fail with email too long', async () => {

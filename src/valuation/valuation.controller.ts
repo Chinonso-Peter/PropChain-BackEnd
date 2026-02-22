@@ -2,19 +2,16 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Delete,
   Param,
   Body,
-  Query,
-  UseGuards,
   ValidationPipe,
   HttpCode,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
-import { ValuationService, PropertyFeatures, ValuationResult } from './valuation.service';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ValuationService } from './valuation.service';
+import { PropertyFeatures, ValuationResult } from './valuation.types';
 
 @ApiTags('valuation')
 @Controller('valuation')
@@ -103,7 +100,8 @@ export class ValuationController {
         const valuation = await this.valuationService.getValuation(item.propertyId, item.features);
         results.push({ propertyId: item.propertyId, valuation, status: 'success' });
       } catch (error) {
-        results.push({ propertyId: item.propertyId, error: error.message, status: 'error' });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.push({ propertyId: item.propertyId, error: errorMessage, status: 'error' });
       }
     }
     return results;

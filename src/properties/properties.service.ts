@@ -540,7 +540,7 @@ export class PropertiesService {
       });
 
       const byStatus = (statusResult || []).reduce(
-        (acc, item) => {
+        (acc: Record<string, number>, item: { status: string; _count: number }) => {
           acc[item.status] = item._count;
           return acc;
         },
@@ -548,7 +548,7 @@ export class PropertiesService {
       );
 
       const byType = (typeResult || []).reduce(
-        (acc, item) => {
+        (acc: Record<string, number>, item: { propertyType: string; _count: number }) => {
           acc[item.propertyType] = item._count;
           return acc;
         },

@@ -76,6 +76,7 @@ export class SecurityMiddleware implements NestMiddleware {
       // Fail open - allow request if security checks fail
       next();
     }
+    return void 0;
   }
 
   private getClientIp(req: Request): string {

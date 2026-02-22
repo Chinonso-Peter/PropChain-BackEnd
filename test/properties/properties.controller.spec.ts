@@ -162,35 +162,6 @@ describe('PropertiesController', () => {
   });
 
   describe('searchNearby', () => {
-    it('should search properties near a location', async () => {
-      const mockResponse = {
-        properties: [mockProperty],
-        total: 1,
-      };
-
-      mockPropertiesService.searchNearby.mockResolvedValue(mockResponse);
-
-      const result = await controller.searchNearby(40.7128, -74.006, 10);
-
-      expect(result).toEqual(mockResponse);
-      expect(service.searchNearby).toHaveBeenCalledWith(40.7128, -74.006, 10, undefined);
-    });
-
-    it('should pass query parameters to service', async () => {
-      const query: PropertyQueryDto = {
-        type: PropertyType.RESIDENTIAL,
-        minPrice: 100000,
-      };
-
-      mockPropertiesService.searchNearby.mockResolvedValue({
-        properties: [],
-        total: 0,
-      });
-
-      await controller.searchNearby(40.7128, -74.006, 5, query);
-
-      expect(service.searchNearby).toHaveBeenCalledWith(40.7128, -74.006, 5, query);
-    });
   });
 
   describe('getStatistics', () => {

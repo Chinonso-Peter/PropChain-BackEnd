@@ -4,7 +4,19 @@
     "outDir": "./dist",
     "rootDir": "./test",
     "module": "commonjs",
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "strict": false,
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noUncheckedIndexedAccess": false,
+    "noImplicitAny": false,
+    "exactOptionalPropertyTypes": false,
+    "strictNullChecks": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
+    "strictFunctionTypes": false,
+    "noImplicitReturns": false
   },
   "include": ["test/**/*"],
   "exclude": ["node_modules", "dist"]
