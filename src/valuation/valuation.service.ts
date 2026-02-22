@@ -5,29 +5,11 @@ import axios from 'axios';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CacheService } from '../common/services/cache.service';
 import { withResilience } from 'src/common/utils/resilence.util';
+import { PropertyFeatures, ValuationResult } from './valuation.types';
+import { PrismaProperty, PrismaPropertyValuation } from '../types/prisma.types';
+import { isObject, isString, isNumber } from '../types/guards';
 
-export interface PropertyFeatures {
-  id?: string;
-  location: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  squareFootage?: number;
-  yearBuilt?: number;
-  propertyType?: string;
-  lotSize?: number;
-  [key: string]: any;
-}
-
-export interface ValuationResult {
-  propertyId: string;
-  estimatedValue: number;
-  confidenceScore: number;
-  valuationDate: Date;
-  source: string;
-  marketTrend?: string;
-  featuresUsed?: PropertyFeatures;
-  rawData?: any;
-}
+// Remove the inline interfaces since we're importing them from valuation.types.ts
 
 @Injectable()
 export class ValuationService {
@@ -85,7 +67,7 @@ export class ValuationService {
           throw new NotFoundException(`Property with ID ${propertyId} not found`);
         }
 
-        const prop = property as any;
+        const prop = property as PrismaProperty;
         features = {
           id: prop.id,
           location: prop.location,
@@ -140,8 +122,9 @@ export class ValuationService {
       this.logger.log(`Successfully cached valuation for property ${propertyId}`);
 
       return savedValuation;
-    } catch (error) {
-      this.logger.error(`Valuation failed for property ${propertyId}: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      this.logger.error(`Valuation failed for property ${propertyId}: ${errorMessage}`);
       throw error;
     }
   }
@@ -186,8 +169,9 @@ export class ValuationService {
         featuresUsed: features,
         rawData: response.data,
       };
-    } catch (error) {
-      this.logger.error(`Zillow API error: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      this.logger.error(`Zillow API error: ${errorMessage}`);
       return null;
     }
   }
@@ -356,19 +340,24 @@ export class ValuationService {
     }
 
     // Simple majority vote for market trend
-    const trendCounts = {};
+    const trendCounts: Record<string, number> = {};
     for (const trend of trends) {
       trendCounts[trend] = (trendCounts[trend] || 0) + 1;
     }
 
-    return Object.keys(trendCounts).reduce((a, b) => (trendCounts[a] > trendCounts[b] ? a : b));
+    const trendEntries = Object.entries(trendCounts);
+    if (trendEntries.length === 0) {
+      return 'stable';
+    }
+    
+    return trendEntries.reduce((a, b) => (a[1] > b[1] ? a : b))[0] as 'up' | 'down' | 'stable';
   }
 
   /**
    * Save valuation to database
    */
   private async saveValuation(valuation: ValuationResult) {
-    const saved = await (this.prisma as any).propertyValuation.create({
+    const saved = await this.prisma.propertyValuation.create({
       data: {
         propertyId: valuation.propertyId,
         estimatedValue: new Decimal(valuation.estimatedValue.toString()),
@@ -435,7 +424,7 @@ export class ValuationService {
 
     this.logger.log(`Cache MISS for property history ${propertyId}, fetching fresh data`);
 
-    const valuations = await (this.prisma as any).propertyValuation?.findMany({
+    const valuations = await this.prisma.propertyValuation?.findMany({
       where: { propertyId },
       orderBy: { valuationDate: 'desc' },
     });
@@ -465,7 +454,7 @@ export class ValuationService {
     // This would typically integrate with market analysis APIs
     // For now, returning mock data
 
-    const valuations = await (this.prisma as any).propertyValuation?.findMany({
+    const valuations = await this.prisma.propertyValuation?.findMany({
       where: {
         property: {
           location: {
@@ -657,7 +646,7 @@ export class ValuationService {
    */
   private async getRecentValuedProperties(limit: number = 10): Promise<Array<{ propertyId: string }>> {
     try {
-      const recentValuations = await (this.prisma as any).propertyValuation?.findMany({
+      const recentValuations = await this.prisma.propertyValuation?.findMany({
         orderBy: { valuationDate: 'desc' },
         take: limit,
         select: {
@@ -690,7 +679,7 @@ export class ValuationService {
           throw new NotFoundException(`Property with ID ${propertyId} not found`);
         }
 
-        const prop = property as any;
+        const prop = property as PrismaProperty;
         features = {
           id: prop.id,
           location: prop.location,

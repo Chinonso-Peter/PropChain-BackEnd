@@ -4,6 +4,8 @@ import { CreatePropertyDto, PropertyStatus as DTOPropertyStatus } from './dto/cr
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyQueryDto } from './dto/property-query.dto';
 import { ConfigService } from '@nestjs/config';
+import { PrismaProperty, PrismaUser } from '../types/prisma.types';
+import { isObject } from '../types/guards';
 
 /**
  * PropertiesService
