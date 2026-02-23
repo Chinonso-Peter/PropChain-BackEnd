@@ -102,7 +102,8 @@ export class CacheService {
         return undefined;
       }
     } catch (error) {
-      this.logger.error(`Cache GET error for key ${key}: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache GET error for key ${key}: ${errMsg}`);
       return undefined;
     }
   }
@@ -117,7 +118,8 @@ export class CacheService {
       this.trackAccessPattern(key, 'set');
       this.logger.debug(`Cache SET: ${key} with TTL: ${ttl}s`);
     } catch (error) {
-      this.logger.error(`Cache SET error for key ${key}: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache SET error for key ${key}: ${errMsg}`);
     }
   }
 
@@ -149,7 +151,8 @@ export class CacheService {
       this.trackAccessPattern(key, 'del');
       this.logger.debug(`Cache DEL: ${key}`);
     } catch (error) {
-      this.logger.error(`Cache DEL error for key ${key}: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache DEL error for key ${key}: ${errMsg}`);
     }
   }
 
@@ -162,7 +165,8 @@ export class CacheService {
       await this.redisService.flushdb();
       this.logger.debug('Cache cleared');
     } catch (error) {
-      this.logger.error(`Cache CLEAR error: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache CLEAR error: ${errMsg}`);
     }
   }
 
@@ -173,7 +177,8 @@ export class CacheService {
     try {
       return await this.redisService.keys(pattern);
     } catch (error) {
-      this.logger.error(`Cache KEYS error for pattern ${pattern}: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache KEYS error for pattern ${pattern}: ${errMsg}`);
       return [];
     }
   }
@@ -186,7 +191,8 @@ export class CacheService {
       const exists = await this.redisService.exists(key);
       return exists;
     } catch (error) {
-      this.logger.error(`Cache HAS error for key ${key}: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache HAS error for key ${key}: ${errMsg}`);
       return false;
     }
   }
@@ -198,7 +204,8 @@ export class CacheService {
     try {
       return await this.redisService.ttl(key);
     } catch (error) {
-      this.logger.error(`Cache TTL error for key ${key}: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache TTL error for key ${key}: ${errMsg}`);
       return -1;
     }
   }
@@ -361,13 +368,15 @@ export class CacheService {
       await this.set(key, freshValue, options);
       return freshValue;
     } catch (error) {
-      this.logger.error(`Cache operation failed for key ${key}, attempting fallback: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Cache operation failed for key ${key}, attempting fallback: ${errMsg}`);
 
       // Try fallback even if cache operations failed
       try {
         return await fallbackFactory();
       } catch (fallbackError) {
-        this.logger.error(`Fallback also failed for key ${key}: ${fallbackError.message}`);
+        const fallbackErrMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        this.logger.error(`Fallback also failed for key ${key}: ${fallbackErrMsg}`);
         throw fallbackError;
       }
     }
@@ -403,7 +412,8 @@ export class CacheService {
         const value = await this.get<T>(key);
         results.push(value);
       } catch (error) {
-        this.logger.error(`Cache MGET error for key ${key}: ${error.message}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Cache MGET error for key ${key}: ${errMsg}`);
         results.push(undefined);
       }
     }
@@ -472,7 +482,8 @@ export class CacheService {
         await this.set(task.key, value, task.options);
         this.logger.log(`Cache WARM completed: ${task.key}`);
       } catch (error) {
-        this.logger.error(`Cache WARM failed for key ${task.key}: ${error.message}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Cache WARM failed for key ${task.key}: ${errMsg}`);
       }
     });
 
@@ -563,7 +574,8 @@ export class CacheService {
         // This is a simplified approach - in production you might want to use Redis INFO command
         memoryUsage = keys.length * 1024; // Estimate 1KB per key
       } catch (error) {
-        this.logger.warn(`Could not get memory usage: ${error.message}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Could not get memory usage: ${errMsg}`);
       }
 
       return {
@@ -574,7 +586,8 @@ export class CacheService {
         metrics: this.metrics,
       };
     } catch (error) {
-      this.logger.error(`Failed to get cache stats: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to get cache stats: ${errMsg}`);
       throw error;
     }
   }
@@ -667,7 +680,8 @@ export class CacheService {
 
       this.logger.log(`Published cache invalidation event for key: ${key}`);
     } catch (error) {
-      this.logger.error(`Failed to publish cache invalidation event: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to publish cache invalidation event: ${errMsg}`);
     }
   }
 
@@ -692,14 +706,16 @@ export class CacheService {
               this.logger.log(`Invalidated cache key from distributed event: ${event.key}`);
             }
           } catch (error) {
-            this.logger.error(`Failed to process cache invalidation event: ${error.message}`);
+            const errMsg = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Failed to process cache invalidation event: ${errMsg}`);
           }
         }
       });
 
       this.logger.log('Subscribed to cache invalidation events for distributed consistency');
     } catch (error) {
-      this.logger.error(`Failed to subscribe to cache invalidation events: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to subscribe to cache invalidation events: ${errMsg}`);
     }
   }
 
@@ -723,7 +739,8 @@ export class CacheService {
       const result = await this.redisService.setex(lockKey, ttl, lockValue);
       return result !== null;
     } catch (error) {
-      this.logger.error(`Failed to acquire distributed lock: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to acquire distributed lock: ${errMsg}`);
       return false;
     }
   }
@@ -748,7 +765,8 @@ export class CacheService {
       const result = await this.redisService.eval(luaScript, [lockKey], [nodeId]);
       return result === 1;
     } catch (error) {
-      this.logger.error(`Failed to release distributed lock: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to release distributed lock: ${errMsg}`);
       return false;
     }
   }
@@ -820,13 +838,14 @@ export class CacheService {
     const retryDelay = options?.retryDelay ?? 100;
     const fallbackOnFailure = options?.fallbackOnFailure ?? true;
 
-    let lastError: Error;
+    let lastError: Error | undefined = undefined;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation();
       } catch (error) {
-        this.logger.warn(`Cache operation attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Cache operation attempt ${attempt}/${maxRetries} failed: ${errMsg}`);
         lastError = error as Error;
 
         if (attempt < maxRetries) {
@@ -884,14 +903,16 @@ export class CacheService {
               const refreshedValue = await fallbackFactories[0](); // Use primary source
               await this.set(key, refreshedValue, { ttl: options?.ttl });
             } catch (refreshError) {
-              this.logger.error(`Background refresh failed: ${refreshError.message}`);
+              const errMsg = refreshError instanceof Error ? refreshError.message : String(refreshError);
+              this.logger.error(`Background refresh failed: ${errMsg}`);
             }
           });
         }
 
         return value;
       } catch (error) {
-        this.logger.warn(`Fallback ${i + 1} failed: ${error.message}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Fallback ${i + 1} failed: ${errMsg}`);
 
         // If this was the last fallback, throw the error
         if (i === fallbackFactories.length - 1) {

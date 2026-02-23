@@ -91,6 +91,7 @@ export class AuditInterceptor implements NestInterceptor {
         },
         error: async error => {
           try {
+            const errMsg = error instanceof Error ? error.message : String(error);
             const method = request.method;
             const userId = request.user?.id || null;
             const tableName = this.extractTableNameFromRoute(request.route?.path);
@@ -102,7 +103,7 @@ export class AuditInterceptor implements NestInterceptor {
               newData: {
                 action: 'FAILED_OPERATION',
                 method,
-                error: error.message,
+                error: errMsg,
                 url: request.url,
               },
               userId,

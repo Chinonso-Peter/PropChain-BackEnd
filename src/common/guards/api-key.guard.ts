@@ -81,7 +81,8 @@ export class EnhancedApiKeyGuard implements CanActivate {
 
       return true;
     } catch (error) {
-      this.logger.warn(`API key authentication failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`API key authentication failed: ${errMsg}`);
       throw error;
     }
   }

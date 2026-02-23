@@ -68,8 +68,9 @@ export class EncryptionService {
         authTag: authTag.toString('hex'),
       };
     } catch (error) {
-      this.logger.error(`Encryption failed: ${error.message}`);
-      throw new Error(`Encryption failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Encryption failed: ${errMsg}`);
+      throw new Error(`Encryption failed: ${errMsg}`);
     }
   }
 
@@ -94,8 +95,9 @@ export class EncryptionService {
 
       return decrypted.toString('utf8');
     } catch (error) {
-      this.logger.error(`Decryption failed: ${error.message}`);
-      throw new Error(`Decryption failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Decryption failed: ${errMsg}`);
+      throw new Error(`Decryption failed: ${errMsg}`);
     }
   }
 
@@ -198,8 +200,9 @@ export class EncryptionService {
         authTag,
       };
     } catch (error) {
-      this.logger.error(`File encryption failed: ${error.message}`);
-      throw new Error(`File encryption failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`File encryption failed: ${errMsg}`);
+      throw new Error(`File encryption failed: ${errMsg}`);
     }
   }
 
@@ -213,8 +216,9 @@ export class EncryptionService {
 
       return Buffer.concat([decipher.update(encryptedData.encryptedBuffer), decipher.final()]);
     } catch (error) {
-      this.logger.error(`File decryption failed: ${error.message}`);
-      throw new Error(`File decryption failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`File decryption failed: ${errMsg}`);
+      throw new Error(`File decryption failed: ${errMsg}`);
     }
   }
 
@@ -241,8 +245,9 @@ export class EncryptionService {
 
       return sign.sign(privateKey, 'hex');
     } catch (error) {
-      this.logger.error(`Signature creation failed: ${error.message}`);
-      throw new Error(`Signature creation failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Signature creation failed: ${errMsg}`);
+      throw new Error(`Signature creation failed: ${errMsg}`);
     }
   }
 
@@ -269,7 +274,8 @@ export class EncryptionService {
 
       return verify.verify(publicKey, signature, 'hex');
     } catch (error) {
-      this.logger.error(`Signature verification failed: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Signature verification failed: ${errMsg}`);
       return false;
     }
   }

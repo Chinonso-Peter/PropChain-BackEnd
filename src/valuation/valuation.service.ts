@@ -212,7 +212,8 @@ export class ValuationService {
         rawData: response.data,
       };
     } catch (error) {
-      this.logger.error(`Redfin API error: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Redfin API error: ${errMsg}`);
       return null;
     }
   }
@@ -260,7 +261,8 @@ export class ValuationService {
         rawData: response.data,
       };
     } catch (error) {
-      this.logger.error(`CoreLogic API error: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`CoreLogic API error: ${errMsg}`);
       return null;
     }
   }
@@ -636,7 +638,8 @@ export class ValuationService {
 
       return properties;
     } catch (error) {
-      this.logger.error(`Failed to get frequently accessed properties: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to get frequently accessed properties: ${errMsg}`);
       return [];
     }
   }
@@ -657,7 +660,8 @@ export class ValuationService {
 
       return recentValuations;
     } catch (error) {
-      this.logger.error(`Failed to get recent valued properties: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to get recent valued properties: ${errMsg}`);
       return [];
     }
   }
@@ -729,7 +733,8 @@ export class ValuationService {
 
       return savedValuation;
     } catch (error) {
-      this.logger.error(`Fresh valuation failed for property ${propertyId}: ${error.message}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Fresh valuation failed for property ${propertyId}: ${errMsg}`);
       throw error;
     }
   }

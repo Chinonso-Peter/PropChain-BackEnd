@@ -247,10 +247,11 @@ export class AuditController {
         encryptedSample: `${encrypted.encrypted.substring(0, 20)}...`,
       };
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       return {
         status: 'error',
         message: 'Encryption test failed',
-        error: error.message,
+        error: errMsg,
       };
     }
   }
