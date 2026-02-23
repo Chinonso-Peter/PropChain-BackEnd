@@ -1,17 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { AuditService, AuditOperation } from '../common/services/audit.service';
+import { AuditService } from '../common/services/audit.service';
 import { Action } from './enums/action.enum';
 import { Resource } from './enums/resource.enum';
 import { StructuredLoggerService } from '../common/logging/logger.service';
 
 @Injectable()
 export class RbacService {
-  private readonly logger = new StructuredLoggerService(null);
-
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
+    private readonly logger: StructuredLoggerService,
   ) {
     this.logger.setContext('RbacService');
   }
@@ -49,7 +48,7 @@ export class RbacService {
       // Check if user has direct permissions
       if (user.userRole && user.userRole.permissions) {
         const hasPerm = user.userRole.permissions.some(
-          rolePerm => rolePerm.permission.resource === resource && rolePerm.permission.action === action,
+          (rolePerm: any) => rolePerm.permission.resource === resource && rolePerm.permission.action === action,
         );
 
         if (hasPerm) {
@@ -60,7 +59,7 @@ export class RbacService {
       // Also check if user has 'MANAGE' permission for the resource (full access)
       if (user.userRole && user.userRole.permissions) {
         const hasManagePerm = user.userRole.permissions.some(
-          rolePerm => rolePerm.permission.resource === resource && rolePerm.permission.action === Action.MANAGE,
+          (rolePerm: any) => rolePerm.permission.resource === resource && rolePerm.permission.action === Action.MANAGE,
         );
 
         if (hasManagePerm) {
@@ -70,7 +69,12 @@ export class RbacService {
 
       return false;
     } catch (error) {
-      this.logger.error('Error checking permission:', error.stack, { userId: userId, resource: resource, action: action });
+      const err = error as Error;
+      this.logger.error('Error checking permission:', err.stack, {
+        userId,
+        resource,
+        action,
+      });
       return false;
     }
   }
@@ -216,7 +220,7 @@ export class RbacService {
       return [];
     }
 
-    return user.userRole.permissions.map(rp => rp.permission);
+    return user.userRole.permissions.map((rp: any) => rp.permission);
   }
 
   /**
@@ -238,7 +242,7 @@ export class RbacService {
       return [];
     }
 
-    return role.permissions.map(rp => rp.permission);
+    return role.permissions.map((rp: any) => rp.permission);
   }
 
   /**
@@ -321,7 +325,12 @@ export class RbacService {
           return false;
       }
     } catch (error) {
-      this.logger.error('Error validating resource ownership:', error.stack, { userId: userId, resourceType: resourceType, resourceId: resourceId });
+      const err = error as Error;
+      this.logger.error('Error validating resource ownership:', err.stack, {
+        userId,
+        resourceType,
+        resourceId,
+      });
       return false;
     }
   }
@@ -339,8 +348,7 @@ export class RbacService {
 
     // For certain actions, check ownership-based access
     if (resourceId && action !== Action.CREATE) {
-      // For read/update/delete actions, check if user owns the resource
-      const resourceMap = {
+      const resourceMap: Partial<Record<Resource, 'property' | 'transaction'>> = {
         [Resource.PROPERTY]: 'property',
         [Resource.TRANSACTION]: 'transaction',
       };

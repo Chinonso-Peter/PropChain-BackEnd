@@ -21,12 +21,17 @@ export class IsEthereumAddressConstraint implements ValidatorConstraintInterface
 
 export function IsEthereumAddress(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
-    registerDecorator({
+    const options: any = {
       target: object.constructor,
       propertyName,
-      options: validationOptions,
       constraints: [],
       validator: IsEthereumAddressConstraint,
-    });
+    };
+
+    if (validationOptions) {
+      options.options = validationOptions;
+    }
+
+    registerDecorator(options);
   };
 }

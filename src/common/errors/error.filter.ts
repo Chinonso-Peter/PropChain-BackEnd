@@ -1,19 +1,18 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger, Inject } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { ErrorResponseDto } from './error.dto';
 import { ErrorCode, ErrorMessages } from './error.codes';
 import { v4 as uuidv4 } from 'uuid';
-import { LoggerService } from '../logger/logger.service';
 import { StructuredLoggerService } from '../logging/logger.service';
+import { getCorrelationId } from '../logging/correlation-id';
+import axios from 'axios';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionsFilter.name);
-
   constructor(
-    @Inject(ConfigService) private readonly configService?: ConfigService,
-    @Inject(StructuredLoggerService) private readonly loggerService?: StructuredLoggerService,
+    private readonly configService: ConfigService,
+    private readonly loggerService: StructuredLoggerService,
   ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
@@ -30,15 +29,36 @@ export class AllExceptionsFilter implements ExceptionFilter {
       errorResponse = this.handleUnknownException(exception, request, requestId);
     }
 
-    // Log the error
-    this.logger.error(`Error occurred: ${errorResponse.errorCode} - ${errorResponse.message}`, {
-      requestId,
-      path: request.url,
-      method: request.method,
-      statusCode: errorResponse.statusCode,
-      details: errorResponse.details,
-      stack: exception instanceof Error ? exception.stack : undefined,
-    });
+    const correlationId = getCorrelationId();
+
+    this.loggerService.error(
+      `Error occurred: ${errorResponse.errorCode} - ${errorResponse.message}`,
+      exception instanceof Error ? exception.stack : undefined,
+      {
+        requestId,
+        correlationId,
+        path: request.url,
+        method: request.method,
+        statusCode: errorResponse.statusCode,
+        details: errorResponse.details,
+      },
+    );
+
+    const alertWebhookUrl = this.configService.get<string>('ERROR_ALERT_WEBHOOK_URL');
+    if (alertWebhookUrl && errorResponse.statusCode >= 500) {
+      axios
+        .post(alertWebhookUrl, {
+          errorCode: errorResponse.errorCode,
+          message: errorResponse.message,
+          statusCode: errorResponse.statusCode,
+          path: request.url,
+          method: request.method,
+          requestId,
+          correlationId,
+          timestamp: errorResponse.timestamp,
+        })
+        .catch(() => undefined);
+    }
 
     response.status(errorResponse.statusCode).json(errorResponse);
   }
@@ -69,14 +89,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exceptionResponse.toString();
     }
 
-    return new ErrorResponseDto({
+    const payload: Partial<ErrorResponseDto> = {
       statusCode: status,
       errorCode,
       message,
-      details,
       path: request.url,
       requestId,
-    });
+    };
+
+    if (details) {
+      (payload as any).details = details;
+    }
+
+    return new ErrorResponseDto(payload);
   }
 
   private handleUnknownException(exception: unknown, request: Request, requestId: string): ErrorResponseDto {
@@ -88,19 +113,24 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const details =
       process.env.NODE_ENV !== 'production' && exception instanceof Error ? [exception.message] : undefined;
 
-    return new ErrorResponseDto({
+    const payload: Partial<ErrorResponseDto> = {
       statusCode: status,
       errorCode,
       message,
-      details,
       path: request.url,
       requestId,
-    });
+    };
+
+    if (details) {
+      (payload as any).details = details;
+    }
+
+    return new ErrorResponseDto(payload);
   }
 
   private mapStatusToErrorCode(status: HttpStatus): ErrorCode {
     const statusToErrorCode: Record<number, ErrorCode> = {
-      [HttpStatus.BAD_REQUEST]: ErrorCode.VALIDATION_ERROR,
+      [HttpStatus.BAD_REQUEST]: ErrorCode.BAD_REQUEST,
       [HttpStatus.UNAUTHORIZED]: ErrorCode.UNAUTHORIZED,
       [HttpStatus.FORBIDDEN]: ErrorCode.FORBIDDEN,
       [HttpStatus.NOT_FOUND]: ErrorCode.NOT_FOUND,

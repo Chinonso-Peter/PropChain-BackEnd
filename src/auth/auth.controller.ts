@@ -101,7 +101,7 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
     return this.authService.login({
       email: loginDto.email,
-      password: loginDto.password
+      password: loginDto.password,
     });
   }
 

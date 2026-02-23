@@ -3,14 +3,16 @@ import { IsEthereumAddress } from '../../src/common/validators/is-ethereum-addre
 import { IsStrongPassword } from '../../src/common/validators/is-strong-password.validator';
 
 class TestEthereumAddressDto {
-  @IsEthereumAddress()
-  walletAddress: string;
+  walletAddress!: string;
 }
 
+IsEthereumAddress()(TestEthereumAddressDto.prototype, 'walletAddress');
+
 class TestStrongPasswordDto {
-  @IsStrongPassword()
-  password: string;
+  password!: string;
 }
+
+IsStrongPassword()(TestStrongPasswordDto.prototype, 'password');
 
 describe('Custom Validators', () => {
   describe('IsEthereumAddress', () => {

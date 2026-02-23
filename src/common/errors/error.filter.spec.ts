@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppExceptionFilter } from '../../../src/common/errors/error.filter';
 import { ConfigService } from '@nestjs/config';
-import { LoggerService } from '../../../src/common/logger/logger.service';
+import { StructuredLoggerService } from '../../../src/common/logging/logger.service';
 import { HttpException, HttpStatus, ArgumentsHost } from '@nestjs/common';
 import { ErrorCode } from '../../../src/common/errors/error.codes';
 
 describe('AppExceptionFilter', () => {
   let filter: AppExceptionFilter;
   let configService: ConfigService;
-  let loggerService: LoggerService;
+  let loggerService: StructuredLoggerService;
 
   const mockResponse = {
     status: jest.fn().mockReturnThis(),
@@ -39,10 +39,9 @@ describe('AppExceptionFilter', () => {
           },
         },
         {
-          provide: LoggerService,
+          provide: StructuredLoggerService,
           useValue: {
-            logError: jest.fn(),
-            logSecurityEvent: jest.fn(),
+            error: jest.fn(),
           },
         },
       ],
@@ -50,7 +49,7 @@ describe('AppExceptionFilter', () => {
 
     filter = module.get<AppExceptionFilter>(AppExceptionFilter);
     configService = module.get<ConfigService>(ConfigService);
-    loggerService = module.get<LoggerService>(LoggerService);
+    loggerService = module.get<StructuredLoggerService>(StructuredLoggerService);
   });
 
   it('should be defined', () => {
@@ -68,8 +67,8 @@ describe('AppExceptionFilter', () => {
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: status,
-        message: message,
-        code: ErrorCode.BAD_REQUEST,
+        message,
+        errorCode: ErrorCode.BAD_REQUEST,
         path: mockRequest.url,
       }),
     );
@@ -86,8 +85,8 @@ describe('AppExceptionFilter', () => {
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: status,
-        message: 'Validation failed',
-        code: ErrorCode.VALIDATION_ERROR,
+        message: 'The provided data is invalid',
+        errorCode: ErrorCode.VALIDATION_ERROR,
         details: validationErrors,
       }),
     );
@@ -102,10 +101,10 @@ describe('AppExceptionFilter', () => {
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'Internal server error',
-        code: ErrorCode.INTERNAL_SERVER_ERROR,
+        message: 'An unexpected error occurred. Please try again later',
+        errorCode: ErrorCode.INTERNAL_SERVER_ERROR,
       }),
     );
-    expect(loggerService.logError).toHaveBeenCalled();
+    expect(loggerService.error).toHaveBeenCalled();
   });
 });
