@@ -5,7 +5,6 @@ import { ConfigService } from '@nestjs/config';
 import { CreatePropertyDto, PropertyStatus, PropertyType } from '../../src/properties/dto/create-property.dto';
 import { UpdatePropertyDto } from '../../src/properties/dto/update-property.dto';
 import { PropertyQueryDto } from '../../src/properties/dto/property-query.dto';
-import { Property, PropertyStatus as PrismaPropertyStatus } from '@prisma/client';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -20,13 +19,13 @@ describe('PropertiesService', () => {
     role: 'USER',
   };
 
-  const mockProperty: Property = {
+  const mockProperty = {
     id: 'prop_123',
     title: 'Test Property',
     description: 'Test Description',
     location: '123 Test St, Test City, Test State, 12345, Test Country',
     price: new Decimal(500000),
-    status: PrismaPropertyStatus.LISTED,
+    status: 'LISTED',
     ownerId: 'user_123',
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -125,7 +124,7 @@ describe('PropertiesService', () => {
           description: createPropertyDto.description,
           location: '123 Test St, Test City, Test State, 12345, Test Country',
           price: createPropertyDto.price,
-          status: PrismaPropertyStatus.LISTED,
+          status: 'LISTED',
           ownerId: 'user_123',
           bedrooms: createPropertyDto.bedrooms,
           bathrooms: createPropertyDto.bathrooms,
@@ -515,18 +514,18 @@ describe('PropertiesService', () => {
       mockPrismaService.property.findUnique.mockResolvedValue(mockProperty);
       mockPrismaService.property.update.mockResolvedValue({
         ...mockProperty,
-        status: PrismaPropertyStatus.SOLD,
+        status: 'SOLD',
       });
 
       const result = await service.updateStatus('prop_123', PropertyStatus.SOLD, 'user_123');
 
-      expect(result.status).toBe(PrismaPropertyStatus.SOLD);
+      expect(result.status).toBe('SOLD');
     });
 
     it('should throw BadRequestException for invalid status transition', async () => {
       mockPrismaService.property.findUnique.mockResolvedValue({
         ...mockProperty,
-        status: PrismaPropertyStatus.SOLD,
+        status: 'SOLD',
       });
 
       await expect(service.updateStatus('prop_123', PropertyStatus.AVAILABLE, 'user_123')).rejects.toThrow(
@@ -553,7 +552,7 @@ describe('PropertiesService', () => {
     it('should return property statistics', async () => {
       mockPrismaService.property.count.mockResolvedValue(10);
       mockPrismaService.property.groupBy
-        .mockResolvedValueOnce([{ status: PrismaPropertyStatus.LISTED, _count: 5 }])
+        .mockResolvedValueOnce([{ status: 'LISTED', _count: 5 }])
         .mockResolvedValueOnce([{ propertyType: PropertyType.RESIDENTIAL, _count: 8 }]);
       mockPrismaService.property.aggregate.mockResolvedValue({
         _avg: { price: 500000 },
@@ -563,7 +562,7 @@ describe('PropertiesService', () => {
 
       expect(result).toEqual({
         total: 10,
-        byStatus: { [PrismaPropertyStatus.LISTED]: 5 },
+        byStatus: { LISTED: 5 },
         byType: { [PropertyType.RESIDENTIAL]: 8 },
         averagePrice: 500000,
       });
@@ -587,21 +586,17 @@ describe('PropertiesService', () => {
     it('should map property status correctly', () => {
       const serviceInstance = service as any;
 
-      expect(serviceInstance.mapPropertyStatus(PropertyStatus.AVAILABLE)).toBe(PrismaPropertyStatus.LISTED);
-      expect(serviceInstance.mapPropertyStatus(PropertyStatus.SOLD)).toBe(PrismaPropertyStatus.SOLD);
-      expect(serviceInstance.mapPropertyStatus(PropertyStatus.PENDING)).toBe(PrismaPropertyStatus.PENDING);
+      expect(serviceInstance.mapPropertyStatus(PropertyStatus.AVAILABLE)).toBe('LISTED');
+      expect(serviceInstance.mapPropertyStatus(PropertyStatus.SOLD)).toBe('SOLD');
+      expect(serviceInstance.mapPropertyStatus(PropertyStatus.PENDING)).toBe('PENDING');
     });
 
     it('should validate status transitions correctly', () => {
       const serviceInstance = service as any;
 
-      expect(serviceInstance.isValidStatusTransition(PrismaPropertyStatus.LISTED, PrismaPropertyStatus.SOLD)).toBe(
-        true,
-      );
+      expect(serviceInstance.isValidStatusTransition('LISTED', 'SOLD')).toBe(true);
 
-      expect(serviceInstance.isValidStatusTransition(PrismaPropertyStatus.SOLD, PrismaPropertyStatus.LISTED)).toBe(
-        false,
-      );
+      expect(serviceInstance.isValidStatusTransition('SOLD', 'LISTED')).toBe(false);
     });
   });
 });

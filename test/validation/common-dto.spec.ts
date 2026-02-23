@@ -28,7 +28,7 @@ describe('Common DTOs', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('min');
+      expect(errors[0]!.constraints).toHaveProperty('min');
     });
 
     it('should fail when limit exceeds 100', async () => {
@@ -38,7 +38,7 @@ describe('Common DTOs', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('max');
+      expect(errors[0]!.constraints).toHaveProperty('max');
     });
 
     it('should fail when page is not an integer', async () => {
@@ -75,7 +75,7 @@ describe('Common DTOs', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isIn');
+      expect(errors[0]!.constraints).toHaveProperty('isIn');
     });
   });
 
@@ -101,7 +101,7 @@ describe('Common DTOs', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isIso8601');
+      expect(errors[0]!.constraints).toHaveProperty('isIso8601');
     });
 
     it('should fail with non-ISO date format', async () => {

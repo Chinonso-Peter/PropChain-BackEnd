@@ -89,6 +89,8 @@ const redactFormat = () => {
  */
 export const createWinstonLogger = (environment: string): winston.Logger => {
   const isProduction = environment === 'production';
+  const errorRetention = process.env.LOG_ERROR_RETENTION_DAYS || '30d';
+  const appRetention = process.env.LOG_APP_RETENTION_DAYS || '14d';
 
   return winston.createLogger({
     level: process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug'),
@@ -117,7 +119,7 @@ export const createWinstonLogger = (environment: string): winston.Logger => {
         filename: 'logs/error-%DATE%.log',
         datePattern: 'YYYY-MM-DD',
         level: 'error',
-        maxFiles: '30d',
+        maxFiles: errorRetention,
         maxSize: '20m',
         zippedArchive: true,
       }),
@@ -126,7 +128,7 @@ export const createWinstonLogger = (environment: string): winston.Logger => {
       new winston.transports.DailyRotateFile({
         filename: 'logs/application-%DATE%.log',
         datePattern: 'YYYY-MM-DD',
-        maxFiles: '14d',
+        maxFiles: appRetention,
         maxSize: '20m',
         zippedArchive: true,
       }),

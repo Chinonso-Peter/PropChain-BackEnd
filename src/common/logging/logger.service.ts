@@ -169,6 +169,7 @@ export class StructuredLoggerService implements NestLoggerService {
     const correlationId = getCorrelationId();
     return {
       correlationId,
+      traceId: correlationId,
       context: this.context,
       timestamp: new Date().toISOString(),
       ...metadata,

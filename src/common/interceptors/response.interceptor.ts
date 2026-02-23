@@ -2,7 +2,7 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nes
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Request } from 'express';
-import { LoggerService } from '../logger/logger.service';
+import { StructuredLoggerService } from '../logging/logger.service';
 
 export interface Response<T> {
   success: boolean;
@@ -16,7 +16,7 @@ export interface Response<T> {
 
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  constructor(private readonly loggerService: LoggerService) {}
+  constructor(private readonly loggerService: StructuredLoggerService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -28,14 +28,14 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
         const duration = Date.now() - startTime;
         const response = context.switchToHttp().getResponse();
         const statusCode = response.statusCode;
-
-        // Log the response
-        this.loggerService.logResponse(request.method, request.url, statusCode, duration, userId);
+        this.loggerService.logResponse(request.method, request.url, statusCode, duration, {
+          userId,
+        });
 
         // Determine message based on status code
         let message = 'Success';
         if (statusCode >= 200 && statusCode < 300) {
-          message = this.getSuccessMessage(request.method, statusCode);
+          message = this.getSuccessMessage(request.method);
         }
 
         return {
@@ -51,7 +51,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     );
   }
 
-  private getSuccessMessage(method: string, statusCode: number): string {
+  private getSuccessMessage(method: string): string {
     const messages: Record<string, string> = {
       GET: 'Resource retrieved successfully',
       POST: 'Resource created successfully',

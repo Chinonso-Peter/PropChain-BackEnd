@@ -11,7 +11,7 @@ export class CreateApiKeyDto {
   @IsString({ message: 'Name must be a string' })
   @IsNotEmpty({ message: 'Name is required' })
   @MaxLength(100, { message: 'Name must not exceed 100 characters' })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Scopes/permissions for the API key',
@@ -22,7 +22,7 @@ export class CreateApiKeyDto {
   @IsArray({ message: 'Scopes must be an array' })
   @ArrayMinSize(1, { message: 'At least one scope is required' })
   @IsString({ each: true, message: 'Each scope must be a string' })
-  scopes: string[];
+  scopes!: string[];
 
   @ApiPropertyOptional({
     description: 'Rate limit (requests per minute) for this key. If not provided, uses global default.',

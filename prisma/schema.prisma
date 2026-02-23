@@ -106,10 +106,23 @@ model Transaction {
   createdAt     DateTime          @default(now()) @map("created_at")
   updatedAt     DateTime          @updatedAt @map("updated_at")
 
-  property  Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  buyerId           String
+  sellerId          String
+  currency          String
+  blockchainHash    String? 
+  blockNumber       Int?
+  confirmations     Int      @default(0)
+  escrowWallet      String?
+  gasFee            Decimal?
+  platformFee       Decimal?
+  disputeReason     String?
+
+    property  Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   recipient User?     @relation("UserTransactions", fields: [toAddress], references: [walletAddress])
   documents Document[]
 
+  @@index([buyerId])
+  @@index([sellerId])
   @@index([fromAddress])
   @@index([toAddress])
   @@index([status])
@@ -228,6 +241,13 @@ enum TransactionStatus {
   COMPLETED
   FAILED
   CANCELLED
+
+  ESCROW_FUNDED
+  BLOCKCHAIN_SUBMITTED
+  CONFIRMING
+  CONFIRMED
+  DISPUTED
+  REFUNDED
 }
 
 enum TransactionType {

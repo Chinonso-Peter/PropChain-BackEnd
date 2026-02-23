@@ -6,49 +6,49 @@ export class DocumentVersionDto {
     description: 'Version number',
     example: 1,
   })
-  version: number;
+  version!: number;
 
   @ApiProperty({
     description: 'Storage key for the file',
     example: 'documents/abc123/v1.pdf',
   })
-  storageKey: string;
+  storageKey!: string;
 
   @ApiProperty({
     description: 'File checksum',
     example: 'sha256:abc123...',
   })
-  checksum: string;
+  checksum!: string;
 
   @ApiProperty({
     description: 'File size in bytes',
     example: 1024000,
   })
-  size: number;
+  size!: number;
 
   @ApiProperty({
     description: 'File MIME type',
     example: 'application/pdf',
   })
-  mimeType: string;
+  mimeType!: string;
 
   @ApiProperty({
     description: 'Upload timestamp',
     example: '2024-01-15T08:00:00.000Z',
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({
     description: 'User who uploaded this version',
     example: 'user_abc123',
   })
-  uploadedBy: string;
+  uploadedBy!: string;
 
   @ApiProperty({
     description: 'Original file name',
     example: 'deed.pdf',
   })
-  originalFileName: string;
+  originalFileName!: string;
 
   @ApiPropertyOptional({
     description: 'Thumbnail storage key',
@@ -68,7 +68,7 @@ export class DocumentMetadataResponseDto {
     description: 'Document title',
     example: 'Property Deed 2024',
   })
-  title: string;
+  title!: string;
 
   @ApiPropertyOptional({
     description: 'Document description',
@@ -81,40 +81,40 @@ export class DocumentMetadataResponseDto {
     example: ['legal', 'deed', '2024'],
     type: [String],
   })
-  tags: string[];
+  tags!: string[];
 
   @ApiProperty({
     description: 'User who uploaded the document',
     example: 'user_abc123',
   })
-  uploadedBy: string;
+  uploadedBy!: string;
 
   @ApiProperty({
     description: 'Document access level',
     enum: DocumentAccessLevel,
     example: DocumentAccessLevel.PRIVATE,
   })
-  accessLevel: DocumentAccessLevel;
+  accessLevel!: DocumentAccessLevel;
 
   @ApiProperty({
     description: 'User IDs allowed to access',
     example: ['user1', 'user2'],
     type: [String],
   })
-  allowedUserIds: string[];
+  allowedUserIds!: string[];
 
   @ApiProperty({
     description: 'Roles allowed to access',
     example: ['ADMIN', 'AGENT'],
     type: [String],
   })
-  allowedRoles: string[];
+  allowedRoles!: string[];
 
   @ApiProperty({
     description: 'Custom metadata fields',
     example: { category: 'legal' },
   })
-  customFields: Record<string, string>;
+  customFields!: Record<string, string>;
 }
 
 export class DocumentResponseDto {
@@ -122,51 +122,51 @@ export class DocumentResponseDto {
     description: 'Document unique identifier',
     example: 'doc_abc123',
   })
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'Document type',
     enum: DocumentType,
     example: DocumentType.DEED,
   })
-  type: DocumentType;
+  type!: DocumentType;
 
   @ApiProperty({
     description: 'Document metadata',
     type: DocumentMetadataResponseDto,
   })
-  metadata: DocumentMetadataResponseDto;
+  metadata!: DocumentMetadataResponseDto;
 
   @ApiProperty({
     description: 'Document versions',
     type: [DocumentVersionDto],
   })
-  versions: DocumentVersionDto[];
+  versions!: DocumentVersionDto[];
 
   @ApiProperty({
     description: 'Current version number',
     example: 1,
   })
-  currentVersion: number;
+  currentVersion!: number;
 
   @ApiProperty({
     description: 'Document status',
     enum: DocumentStatus,
     example: DocumentStatus.ACTIVE,
   })
-  status: DocumentStatus;
+  status!: DocumentStatus;
 
   @ApiProperty({
     description: 'Creation timestamp',
     example: '2024-01-15T08:00:00.000Z',
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({
     description: 'Last update timestamp',
     example: '2024-01-22T09:00:00.000Z',
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 
 export class DownloadUrlResponseDto {
@@ -174,11 +174,11 @@ export class DownloadUrlResponseDto {
     description: 'Signed download URL',
     example: 'https://storage.example.com/documents/abc123?signature=...',
   })
-  url: string;
+  url!: string;
 
   @ApiProperty({
     description: 'URL expiration time in seconds',
     example: 3600,
   })
-  expiresIn: number;
+  expiresIn!: number;
 }

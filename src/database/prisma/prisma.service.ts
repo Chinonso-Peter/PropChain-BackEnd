@@ -1,12 +1,14 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
+import { StructuredLoggerService } from '../../common/logging/logger.service';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(PrismaService.name);
-
-  constructor(private configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly logger: StructuredLoggerService,
+  ) {
     const databaseUrl = configService.get<string>('DATABASE_URL');
 
     // Connection pooling configuration via URL parameters
@@ -24,16 +26,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         { level: 'warn', emit: 'stdout' },
       ],
     });
+
+    this.logger.setContext('PrismaService');
   }
 
   async onModuleInit() {
     this.logger.log('Connecting to database...');
 
-    // Set up query logging in development
     if (this.configService.get<string>('NODE_ENV') === 'development') {
-      (this as any).$on('query', (e: Prisma.QueryEvent) => {
-        this.logger.debug(`Query: ${e.query}`);
-        this.logger.debug(`Duration: ${e.duration}ms`);
+      (this as any).$on('query', (e: any) => {
+        this.logger.logDatabase('query', e.duration, {
+          query: e.query,
+          params: e.params,
+        });
       });
     }
 
@@ -79,7 +84,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       await this.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
-      this.logger.error('Database health check failed', error);
+      const err = error as Error;
+      this.logger.error('Database health check failed', err.stack, {
+        message: err.message,
+      });
       return false;
     }
   }

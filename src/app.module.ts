@@ -4,7 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
 import { BullModule } from '@nestjs/bull';
-import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 
 // Core & Database
 import { PrismaModule } from './database/prisma/prisma.module';
@@ -19,6 +19,8 @@ import { CacheModule } from './common/cache/cache.module';
 // Logging
 import { LoggingModule } from './common/logging/logging.module';
 import { LoggingInterceptor } from './common/logging/logging.interceptor';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { AllExceptionsFilter } from './common/errors/error.filter';
 
 // Redis
 import { RedisModule } from './common/services/redis.module';
@@ -110,7 +112,15 @@ import { AuthRateLimitMiddleware } from './auth/middleware/auth.middleware';
   providers: [
     {
       provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
     },
   ],
 })

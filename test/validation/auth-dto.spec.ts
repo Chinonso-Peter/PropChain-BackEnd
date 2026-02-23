@@ -27,7 +27,7 @@ describe('Auth DTOs', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].property).toBe('email');
+      expect(errors[0]!.property).toBe('email');
     });
 
     it('should fail with empty email', async () => {
@@ -72,7 +72,7 @@ describe('Auth DTOs', () => {
       });
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].property).toBe('walletAddress');
+      expect(errors[0]!.property).toBe('walletAddress');
     });
 
     it('should fail with empty signature', async () => {

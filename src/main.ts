@@ -5,15 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import { AppModule } from './app.module';
-
-// --- NEW LOGGING IMPORTS ---
 import { StructuredLoggerService } from './common/logging/logger.service';
-import { LoggingInterceptor } from './common/logging/logging.interceptor';
-// ---------------------------
-
-// FIX: Corrected import name from AppExceptionFilter to AllExceptionsFilter
-import { AllExceptionsFilter } from './common/errors/error.filter';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -21,8 +13,6 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
-
-  // Use our new StructuredLoggerService
   const logger = await app.resolve(StructuredLoggerService);
   app.useLogger(logger);
 
@@ -59,13 +49,6 @@ async function bootstrap() {
       },
     }),
   );
-
-  // Global filters and interceptors
-  // FIX: Removed arguments from AllExceptionsFilter because the constructor expects 0
-  app.useGlobalFilters(new AllExceptionsFilter());
-
-  // Using 'as any' to bypass the strict LoggerService interface mismatch
-  app.useGlobalInterceptors(new ResponseInterceptor(logger as any), new LoggingInterceptor(logger as any));
 
   // API prefix
   const apiPrefix = configService.get('API_PREFIX', 'api');
