@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { StructuredLoggerService } from './common/logging/logger.service';
+import { ErrorResponseDto } from './common/errors/error.dto';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -68,7 +69,9 @@ async function bootstrap() {
       .addApiKey({ type: 'apiKey', name: 'X-API-KEY', in: 'header' }, 'apiKey')
       .build();
 
-    const document = SwaggerModule.createDocument(app, config);
+    const document = SwaggerModule.createDocument(app, config, {
+      extraModels: [ErrorResponseDto],
+    });
     SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
       customSiteTitle: 'PropChain API Documentation',
       customCss: '.swagger-ui .topbar { display: none }',

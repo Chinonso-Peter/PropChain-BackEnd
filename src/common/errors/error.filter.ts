@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { ErrorResponseDto } from './error.dto';
 import { ErrorCode, ErrorMessages } from './error.codes';
 import { v4 as uuidv4 } from 'uuid';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 import { StructuredLoggerService } from '../logging/logger.service';
 import { getCorrelationId } from '../logging/correlation-id';
 import axios from 'axios';
@@ -13,7 +14,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
   constructor(
     private readonly configService: ConfigService,
     private readonly loggerService: StructuredLoggerService,
-  ) {}
+    private readonly i18n: I18nService,
+  ) { }
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -71,17 +73,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message: string;
     let details: string[] | undefined;
 
+    const lang = I18nContext.current()?.lang || request.headers['accept-language'] || 'en';
+
     if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
       const responseObj = exceptionResponse as any;
 
       // Handle validation errors
       if (Array.isArray(responseObj.message)) {
         errorCode = ErrorCode.VALIDATION_ERROR;
-        message = ErrorMessages[ErrorCode.VALIDATION_ERROR];
+        message = this.i18n.translate(`errors.${ErrorCode.VALIDATION_ERROR}`, { lang }) as string;
         details = responseObj.message;
       } else {
         errorCode = this.mapStatusToErrorCode(status);
-        message = responseObj.message || ErrorMessages[errorCode];
+        const translatedMessage = this.i18n.translate(`errors.${errorCode}`, { lang }) as string;
+        // fallback to standard message if translation key returns itself or we didn't translate
+        message = responseObj.message || (translatedMessage !== `errors.${errorCode}` ? translatedMessage : ErrorMessages[errorCode]);
         details = responseObj.details;
       }
     } else {
@@ -107,7 +113,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private handleUnknownException(exception: unknown, request: Request, requestId: string): ErrorResponseDto {
     const status = HttpStatus.INTERNAL_SERVER_ERROR;
     const errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
-    const message = ErrorMessages[errorCode];
+    const lang = I18nContext.current()?.lang || request.headers['accept-language'] || 'en';
+
+    let message = this.i18n.translate(`errors.${errorCode}`, { lang }) as string;
+    if (message === `errors.${errorCode}`) {
+      message = ErrorMessages[errorCode];
+    }
 
     // In production, don't expose internal error details
     const details =

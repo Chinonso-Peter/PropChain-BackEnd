@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { StructuredLoggerService } from '../../../src/common/logging/logger.service';
 import { HttpException, HttpStatus, ArgumentsHost } from '@nestjs/common';
 import { ErrorCode } from '../../../src/common/errors/error.codes';
+import { I18nService } from 'nestjs-i18n';
 
 describe('AppExceptionFilter', () => {
   let filter: AppExceptionFilter;
@@ -42,6 +43,17 @@ describe('AppExceptionFilter', () => {
           provide: StructuredLoggerService,
           useValue: {
             error: jest.fn(),
+          },
+        },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: jest.fn().mockImplementation((key) => {
+              if (key === `errors.${ErrorCode.VALIDATION_ERROR}`) {
+                return 'The provided data is invalid';
+              }
+              return key;
+            }),
           },
         },
       ],

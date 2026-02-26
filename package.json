@@ -99,6 +99,7 @@
     "moment": "^2.29.4",
     "multer": "^2.0.2",
     "nest-winston": "^1.10.2",
+    "nestjs-i18n": "^10.4.0",
     "opossum": "^9.0.0",
     "passport": "^0.7.0",
     "passport-custom": "^1.1.1",

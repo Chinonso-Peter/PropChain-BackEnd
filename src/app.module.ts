@@ -22,6 +22,10 @@ import { LoggingInterceptor } from './common/logging/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/errors/error.filter';
 
+// I18n
+import { I18nModule, AcceptLanguageResolver, QueryResolver, HeaderResolver } from 'nestjs-i18n';
+import * as path from 'path';
+
 // Redis
 import { RedisModule } from './common/services/redis.module';
 import { createRedisConfig } from './common/services/redis.config';
@@ -58,6 +62,23 @@ import { ObservabilityModule } from './observability/observability.module';
       expandVariables: true, // Allow environment variable expansion
     }),
     ConfigurationModule,
+
+    // I18n
+    I18nModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        fallbackLanguage: configService.getOrThrow('FALLBACK_LANGUAGE', 'en'),
+        loaderOptions: {
+          path: path.join(__dirname, '/i18n/'),
+          watch: true,
+        },
+      }),
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+        new HeaderResolver(['x-lang']),
+      ],
+      inject: [ConfigService],
+    }),
 
     // Caching
     CacheModule,

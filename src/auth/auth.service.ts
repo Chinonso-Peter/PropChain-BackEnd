@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { UnauthorizedException, InvalidCredentialsException, TokenExpiredException, InvalidInputException, UserNotFoundException } from '../common/errors/custom.exceptions';
 import { UserService } from '../users/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -64,7 +65,7 @@ export class AuthService {
       } else if (credentials.walletAddress) {
         user = await this.validateUserByWallet(credentials.walletAddress, credentials.signature);
       } else {
-        throw new BadRequestException('Email/password or wallet address/signature required');
+        throw new InvalidInputException(undefined, 'Email/password or wallet address/signature required');
       }
 
       if (!user) {
@@ -75,7 +76,7 @@ export class AuthService {
           const attempts = parseInt(existing || '0', 10) + 1;
           await this.redisService.setex(attemptsKey, attemptWindow, attempts.toString());
         }
-        throw new UnauthorizedException('Invalid credentials');
+        throw new InvalidCredentialsException();
       }
 
       // successful login, clear attempts
@@ -99,13 +100,13 @@ export class AuthService {
 
     if (!user || !user.password) {
       this.logger.warn('Email validation failed: User not found', { email });
-      throw new UnauthorizedException('Invalid credentials');
+      throw new InvalidCredentialsException();
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       this.logger.warn('Email validation failed: Invalid password', { email });
-      throw new UnauthorizedException('Invalid credentials');
+      throw new InvalidCredentialsException();
     }
 
     const { password: _, ...result } = user as any;
@@ -141,7 +142,7 @@ export class AuthService {
         this.logger.warn('Refresh token validation failed: User not found', {
           userId: payload.sub,
         });
-        throw new UnauthorizedException('User not found');
+        throw new UserNotFoundException(payload.sub);
       }
 
       const storedToken = await this.redisService.get(`refresh_token:${payload.sub}`);
@@ -149,14 +150,14 @@ export class AuthService {
         this.logger.warn('Refresh token validation failed: Invalid token', {
           userId: payload.sub,
         });
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new TokenExpiredException('Invalid refresh token');
       }
 
       this.logger.logAuth('Token refreshed successfully', { userId: user.id });
       return this.generateTokens(user);
     } catch (error) {
       this.logger.error('Token refresh failed', error.stack);
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new TokenExpiredException('Invalid refresh token');
     }
   }
 
@@ -177,7 +178,7 @@ export class AuthService {
       }
     }
 
-    
+
     // === REFRESH TOKEN REVOCATION ===
     // Prevents token refresh even if JWT signature is still valid
 
@@ -212,7 +213,7 @@ export class AuthService {
 
     if (!resetData) {
       this.logger.warn('Invalid or expired password reset token received');
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new InvalidInputException(undefined, 'Invalid or expired reset token');
     }
 
     const { userId, expiry } = JSON.parse(resetData);
@@ -220,7 +221,7 @@ export class AuthService {
     if (Date.now() > expiry) {
       await this.redisService.del(`password_reset:${resetToken}`);
       this.logger.warn('Expired password reset token used', { userId });
-      throw new BadRequestException('Reset token has expired');
+      throw new InvalidInputException(undefined, 'Reset token has expired');
     }
 
     await this.userService.updatePassword(userId, newPassword);
@@ -235,7 +236,7 @@ export class AuthService {
 
     if (!verificationData) {
       this.logger.warn('Invalid or expired email verification token');
-      throw new BadRequestException('Invalid or expired verification token');
+      throw new InvalidInputException(undefined, 'Invalid or expired verification token');
     }
 
     const { userId } = JSON.parse(verificationData);
@@ -311,7 +312,7 @@ export class AuthService {
     const payload = {
       sub: user.id,      // Subject (user ID)
       email: user.email,
-      jti,               // JWT ID for blacklisting
+      jti: jti           // JWT ID for blacklisting
     };
 
     const accessToken = this.jwtService.sign(payload, {

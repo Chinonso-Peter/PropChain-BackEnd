@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { CreatePropertyDto, PropertyStatus, PropertyType } from '../../src/properties/dto/create-property.dto';
 import { UpdatePropertyDto } from '../../src/properties/dto/update-property.dto';
 import { PropertyQueryDto } from '../../src/properties/dto/property-query.dto';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, UserNotFoundException, InvalidInputException, BusinessRuleViolationException } from '../../src/common/errors/custom.exceptions';
 import { Decimal } from '@prisma/client/runtime/library';
 
 describe('PropertiesService', () => {
@@ -146,14 +146,14 @@ describe('PropertiesService', () => {
     it('should throw NotFoundException if user does not exist', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.create(createPropertyDto, 'invalid_user')).rejects.toThrow(NotFoundException);
+      await expect(service.create(createPropertyDto, 'invalid_user')).rejects.toThrow(UserNotFoundException);
     });
 
     it('should handle database errors', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.property.create.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.create(createPropertyDto, 'user_123')).rejects.toThrow(BadRequestException);
+      await expect(service.create(createPropertyDto, 'user_123')).rejects.toThrow(InvalidInputException);
     });
   });
 
@@ -529,7 +529,7 @@ describe('PropertiesService', () => {
       });
 
       await expect(service.updateStatus('prop_123', PropertyStatus.AVAILABLE, 'user_123')).rejects.toThrow(
-        BadRequestException,
+        BusinessRuleViolationException,
       );
     });
   });

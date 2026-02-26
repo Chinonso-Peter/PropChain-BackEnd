@@ -99,7 +99,7 @@ describe('AuthService', () => {
       jest.spyOn(authService, 'validateUserByEmail').mockResolvedValue(null);
       redisMock.get.mockResolvedValue('0');
 
-      await expect(authService.login(creds)).rejects.toThrow('Invalid credentials');
+      await expect(authService.login(creds)).rejects.toThrow('The provided credentials are invalid');
       expect(redisMock.setex).toHaveBeenCalledWith('login_attempts:foo@bar.com', 600, '1');
     });
 

@@ -11,9 +11,9 @@ import {
   ResetPasswordDto,
   VerifyEmailParamsDto,
 } from './dto';
-import { ErrorResponseDto } from '../common/errors/error.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { Request } from 'express';
+import { ApiStandardErrorResponse } from '../common/errors/api-standard-error-response.decorator';
 
 /**
  * AuthController
@@ -27,7 +27,7 @@ import { Request } from 'express';
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   /**
    * Register a new user account
@@ -63,12 +63,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 409, description: 'User with this email already exists.', type: ErrorResponseDto })
-  @ApiResponse({
-    status: 400,
-    description: 'Validation failed (weak password, invalid email, etc).',
-    type: ErrorResponseDto,
-  })
+  @ApiStandardErrorResponse([400, 409])
   async register(@Body() createUserDto: CreateUserDto) {
     return this.authService.register(createUserDto);
   }
@@ -101,8 +96,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Invalid credentials or too many attempts.', type: ErrorResponseDto })
-  @ApiResponse({ status: 400, description: 'Validation failed.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([400, 401])
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
     return this.authService.login({
@@ -137,7 +131,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Invalid wallet address or signature.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
   async web3Login(@Body() loginDto: LoginWeb3Dto) {
     return this.authService.login({
@@ -171,7 +165,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenDto.refreshToken);
@@ -202,7 +196,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing token.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request) {
     const user = req['user'] as any;
@@ -262,7 +256,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid, expired, or already-used reset token.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([400])
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
@@ -296,6 +290,7 @@ export class AuthController {
     description: 'Invalid, expired, or already-used verification token.',
     type: ErrorResponseDto,
   })
+  @ApiStandardErrorResponse([400])
   async verifyEmail(@Param() params: VerifyEmailParamsDto) {
     return this.authService.verifyEmail(params.token);
   }
@@ -333,7 +328,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
   async getSessions(@Req() req: Request) {
     const user = req['user'] as any;
@@ -366,7 +361,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
   async invalidateSession(@Req() req: Request, @Param('sessionId') sessionId: string) {
     const user = req['user'] as any;
@@ -399,7 +394,7 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.', type: ErrorResponseDto })
+  @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
   async invalidateAllSessions(@Req() req: Request) {
     const user = req['user'] as any;

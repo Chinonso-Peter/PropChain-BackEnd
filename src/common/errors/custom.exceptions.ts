@@ -65,6 +65,12 @@ export class InsufficientPermissionsException extends BaseCustomException {
 }
 
 // Resource Exceptions
+export class NotFoundException extends BaseCustomException {
+  constructor(message?: string) {
+    super(ErrorCode.RESOURCE_NOT_FOUND, message || 'Resource not found', undefined, HttpStatus.NOT_FOUND);
+  }
+}
+
 export class ResourceNotFoundException extends BaseCustomException {
   constructor(resourceType?: string, message?: string) {
     const customMessage = message || (resourceType ? `${resourceType} not found` : undefined);

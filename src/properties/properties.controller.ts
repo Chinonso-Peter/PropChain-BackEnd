@@ -5,6 +5,7 @@ import { CreatePropertyDto, UpdatePropertyDto, PropertyQueryDto, PropertyRespons
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PropertySearchService } from './search/property-search.service';
 import { PropertySearchDto } from './dto/property-search.dto';
+import { ApiStandardErrorResponse } from '../common/errors/api-standard-error-response.decorator';
 
 @ApiTags('properties')
 @Controller('properties')
@@ -14,11 +15,11 @@ export class PropertiesController {
   constructor(
     private readonly propertiesService: PropertiesService,
     private readonly propertySearchService: PropertySearchService,
-  ) {}
+  ) { }
   @Post()
   @ApiOperation({ summary: 'Create a new property' })
   @ApiResponse({ status: 201, description: 'Property created successfully.', type: PropertyResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiStandardErrorResponse([400, 401, 404])
   create(@Body() createPropertyDto: CreatePropertyDto, @Request() req) {
     return this.propertiesService.create(createPropertyDto, req.user.id);
   }
@@ -26,6 +27,7 @@ export class PropertiesController {
   @Get()
   @ApiOperation({ summary: 'Get all properties with optional filters' })
   @ApiResponse({ status: 200, description: 'List of properties.' })
+  @ApiStandardErrorResponse([400, 401])
   findAll(@Query() query: PropertyQueryDto) {
     return this.propertiesService.findAll(query);
   }
@@ -33,6 +35,7 @@ export class PropertiesController {
   @Get('search')
   @ApiOperation({ summary: 'Advanced property search (geospatial + filters)' })
   @ApiResponse({ status: 200, description: 'Search results.' })
+  @ApiStandardErrorResponse([400, 401])
   search(@Query() dto: PropertySearchDto, @Request() req) {
     return this.propertySearchService.search(dto, req.user.id);
   }
@@ -40,6 +43,7 @@ export class PropertiesController {
   @Get('statistics')
   @ApiOperation({ summary: 'Get property statistics' })
   @ApiResponse({ status: 200, description: 'Property statistics.' })
+  @ApiStandardErrorResponse([400, 401])
   getStatistics() {
     return this.propertiesService.getStatistics();
   }
@@ -48,6 +52,7 @@ export class PropertiesController {
   @ApiOperation({ summary: 'Get properties by owner' })
   @ApiParam({ name: 'ownerId', description: 'Owner ID' })
   @ApiResponse({ status: 200, description: 'Properties by owner.' })
+  @ApiStandardErrorResponse([400, 401])
   findByOwner(@Param('ownerId') ownerId: string, @Query() query: PropertyQueryDto) {
     return this.propertiesService.findByOwner(ownerId, query);
   }
@@ -56,7 +61,7 @@ export class PropertiesController {
   @ApiOperation({ summary: 'Get a property by ID' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Property found.', type: PropertyResponseDto })
-  @ApiResponse({ status: 404, description: 'Property not found.' })
+  @ApiStandardErrorResponse([400, 401, 404])
   findOne(@Param('id') id: string) {
     return this.propertiesService.findOne(id);
   }
@@ -65,8 +70,7 @@ export class PropertiesController {
   @ApiOperation({ summary: 'Update a property' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Property updated successfully.', type: PropertyResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid input data.' })
-  @ApiResponse({ status: 404, description: 'Property not found.' })
+  @ApiStandardErrorResponse([400, 401, 404])
   update(@Param('id') id: string, @Body() updatePropertyDto: UpdatePropertyDto) {
     return this.propertiesService.update(id, updatePropertyDto);
   }
@@ -75,8 +79,7 @@ export class PropertiesController {
   @ApiOperation({ summary: 'Update property status' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Property status updated successfully.' })
-  @ApiResponse({ status: 400, description: 'Invalid status transition.' })
-  @ApiResponse({ status: 404, description: 'Property not found.' })
+  @ApiStandardErrorResponse([400, 401, 404, 409])
   updateStatus(@Param('id') id: string, @Body('status') status: PropertyStatus, @Request() req) {
     return this.propertiesService.updateStatus(id, status, req.user.id);
   }
@@ -85,7 +88,7 @@ export class PropertiesController {
   @ApiOperation({ summary: 'Delete a property' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Property deleted successfully.' })
-  @ApiResponse({ status: 404, description: 'Property not found.' })
+  @ApiStandardErrorResponse([400, 401, 404])
   remove(@Param('id') id: string) {
     return this.propertiesService.remove(id);
   }
