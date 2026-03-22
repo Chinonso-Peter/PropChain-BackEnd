@@ -5,7 +5,7 @@ import { Reflector } from '@nestjs/core';
 
 /**
  * Enhanced Authentication Guard
- * 
+ *
  * Provides hardened authentication with additional security checks
  */
 @Injectable()
@@ -42,10 +42,10 @@ export class AuthHardeningGuard implements CanActivate {
 
       // Additional security checks
       await this.validateSecurityContext(payload, request);
-      
+
       // Attach user to request
       request.user = payload;
-      
+
       return true;
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired token');
@@ -57,10 +57,14 @@ export class AuthHardeningGuard implements CanActivate {
    */
   private extractTokenFromHeader(request: any): string | null {
     const authHeader = request.headers.authorization;
-    if (!authHeader) return null;
+    if (!authHeader) {
+      return null;
+    }
 
     const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') return null;
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      return null;
+    }
 
     return parts[1];
   }
@@ -71,7 +75,9 @@ export class AuthHardeningGuard implements CanActivate {
   private isValidTokenFormat(token: string): boolean {
     // JWT tokens have 3 parts separated by dots
     const parts = token.split('.');
-    if (parts.length !== 3) return false;
+    if (parts.length !== 3) {
+      return false;
+    }
 
     // Each part should be base64url encoded
     try {
@@ -101,7 +107,7 @@ export class AuthHardeningGuard implements CanActivate {
     const now = Date.now();
     const exp = payload.exp * 1000;
     const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
-    
+
     if (exp - now < bufferTime) {
       throw new UnauthorizedException('Token is expiring soon, please refresh');
     }
@@ -109,7 +115,7 @@ export class AuthHardeningGuard implements CanActivate {
     // Check issued at time (prevent very old tokens)
     const iat = payload.iat * 1000;
     const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-    
+
     if (now - iat > maxAge) {
       throw new UnauthorizedException('Token is too old, please re-authenticate');
     }
@@ -117,7 +123,7 @@ export class AuthHardeningGuard implements CanActivate {
     // Validate user agent consistency
     const expectedUserAgent = payload.userAgent;
     const actualUserAgent = request.headers['user-agent'];
-    
+
     if (expectedUserAgent && expectedUserAgent !== actualUserAgent) {
       throw new UnauthorizedException('User agent mismatch');
     }
@@ -127,7 +133,7 @@ export class AuthHardeningGuard implements CanActivate {
     if (ipValidationEnabled) {
       const expectedIp = payload.ip;
       const actualIp = this.getClientIp(request);
-      
+
       if (expectedIp && expectedIp !== actualIp) {
         throw new UnauthorizedException('IP address mismatch');
       }
@@ -138,11 +144,13 @@ export class AuthHardeningGuard implements CanActivate {
    * Get client IP address
    */
   private getClientIp(request: any): string {
-    return request.ip ||
-           request.connection.remoteAddress ||
-           request.socket.remoteAddress ||
-           (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-           '0.0.0.0';
+    return (
+      request.ip ||
+      request.connection.remoteAddress ||
+      request.socket.remoteAddress ||
+      (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      '0.0.0.0'
+    );
   }
 }
 
@@ -158,20 +166,20 @@ export class RbacHardeningGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());
-    
+
     if (!requiredRoles) {
       return true; // No roles required
     }
 
     const { user } = context.switchToHttp().getRequest();
-    
+
     if (!user) {
       throw new UnauthorizedException('User not authenticated');
     }
 
     // Check if user has required roles
     const hasRole = requiredRoles.some(role => user.roles?.includes(role));
-    
+
     if (!hasRole) {
       throw new ForbiddenException('Insufficient permissions');
     }
@@ -205,7 +213,7 @@ export class RbacHardeningGuard implements CanActivate {
     // Check session timeout
     const sessionTimeout = this.configService.get<number>('SESSION_TIMEOUT', 3600000); // 1 hour
     const lastActivity = user.lastActivity || user.iat * 1000;
-    
+
     if (Date.now() - lastActivity > sessionTimeout) {
       throw new UnauthorizedException('Session has expired');
     }
@@ -217,9 +225,7 @@ export class RbacHardeningGuard implements CanActivate {
  */
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  constructor(
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly configService: ConfigService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -236,7 +242,7 @@ export class ApiKeyGuard implements CanActivate {
 
     // Verify API key
     const isValid = await this.verifyApiKey(apiKey, request);
-    
+
     if (!isValid) {
       throw new UnauthorizedException('Invalid API key');
     }
@@ -250,11 +256,15 @@ export class ApiKeyGuard implements CanActivate {
   private extractApiKey(request: any): string | null {
     // Check header first
     const headerKey = request.headers['x-api-key'];
-    if (headerKey) return headerKey;
+    if (headerKey) {
+      return headerKey;
+    }
 
     // Check query parameter
     const queryKey = request.query.api_key;
-    if (queryKey) return queryKey;
+    if (queryKey) {
+      return queryKey;
+    }
 
     return null;
   }
@@ -284,11 +294,12 @@ export class ApiKeyGuard implements CanActivate {
 export class RequestSigningGuard implements CanActivate {
   constructor(
     private readonly configService: ConfigService,
+    private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    
+
     // Skip signing verification for non-sensitive endpoints
     if (this.isPublicEndpoint(context)) {
       return true;
@@ -296,7 +307,7 @@ export class RequestSigningGuard implements CanActivate {
 
     const signature = request.headers['x-signature'];
     const timestamp = request.headers['x-timestamp'];
-    
+
     if (!signature || !timestamp) {
       throw new UnauthorizedException('Request signature and timestamp are required');
     }
@@ -305,14 +316,14 @@ export class RequestSigningGuard implements CanActivate {
     const now = Date.now();
     const requestTime = parseInt(timestamp);
     const maxAge = 5 * 60 * 1000; // 5 minutes
-    
+
     if (Math.abs(now - requestTime) > maxAge) {
       throw new UnauthorizedException('Request timestamp is too old');
     }
 
     // Verify signature
     const isValid = await this.verifySignature(request, signature);
-    
+
     if (!isValid) {
       throw new UnauthorizedException('Invalid request signature');
     }

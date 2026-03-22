@@ -13,7 +13,7 @@ export class EnvSanitizer {
       if (typeof value === 'string') {
         // Remove null bytes and control characters
         sanitized[key] = value.replace(/[\x00-\x1F\x7F]/g, '').trim();
-        
+
         // Remove potential SQL injection patterns
         if (key.toLowerCase().includes('database') || key.toLowerCase().includes('db')) {
           sanitized[key] = this.sanitizeDatabaseUrl(value);

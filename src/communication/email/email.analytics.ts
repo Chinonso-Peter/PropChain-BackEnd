@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Email Analytics Service
- * 
+ *
  * Tracks email delivery, engagement, and performance metrics
  */
 @Injectable()
@@ -181,6 +181,7 @@ export class EmailAnalyticsService {
     const existing = this.analytics.get(key) || {
       batchId: data.batchId,
       startedAt: new Date(),
+      sentAt: new Date(),
       events: [],
     };
 
@@ -212,12 +213,14 @@ export class EmailAnalyticsService {
    */
   async getBatchAnalytics(batchId: string): Promise<BatchAnalytics | null> {
     const analytics = this.analytics.get(`batch:${batchId}`);
-    if (!analytics) return null;
+    if (!analytics) {
+      return null;
+    }
 
     const batchEvents = analytics.events.filter(e => e.type === 'batch_completed');
     const latestEvent = batchEvents[batchEvents.length - 1];
 
-    return latestEvent ? latestEvent.data as any : null;
+    return latestEvent ? (latestEvent.data as any) : null;
   }
 
   /**
@@ -225,12 +228,12 @@ export class EmailAnalyticsService {
    */
   async getTemplatePerformance(templateName: string, timeRange?: TimeRange): Promise<TemplatePerformance> {
     const allAnalytics = Array.from(this.analytics.values());
-    const filteredAnalytics = timeRange 
+    const filteredAnalytics = timeRange
       ? allAnalytics.filter(a => this.isInTimeRange(a.sentAt, timeRange))
       : allAnalytics;
 
     const templateEmails = filteredAnalytics.filter(a => a.templateName === templateName);
-    
+
     if (templateEmails.length === 0) {
       return {
         templateName,
@@ -248,25 +251,28 @@ export class EmailAnalyticsService {
       };
     }
 
-    const metrics = templateEmails.reduce((acc, email) => {
-      const events = email.events;
-      
-      acc.totalSent++;
-      acc.totalDelivered += events.filter(e => e.type === 'delivered').length;
-      acc.totalOpened += events.filter(e => e.type === 'opened').length;
-      acc.totalClicked += events.filter(e => e.type === 'clicked').length;
-      acc.totalBounced += events.filter(e => e.type === 'bounced').length;
-      acc.totalComplained += events.filter(e => e.type === 'complained').length;
+    const metrics = templateEmails.reduce(
+      (acc, email) => {
+        const events = email.events;
 
-      return acc;
-    }, {
-      totalSent: 0,
-      totalDelivered: 0,
-      totalOpened: 0,
-      totalClicked: 0,
-      totalBounced: 0,
-      totalComplained: 0,
-    });
+        acc.totalSent++;
+        acc.totalDelivered += events.filter(e => e.type === 'delivered').length;
+        acc.totalOpened += events.filter(e => e.type === 'opened').length;
+        acc.totalClicked += events.filter(e => e.type === 'clicked').length;
+        acc.totalBounced += events.filter(e => e.type === 'bounced').length;
+        acc.totalComplained += events.filter(e => e.type === 'complained').length;
+
+        return acc;
+      },
+      {
+        totalSent: 0,
+        totalDelivered: 0,
+        totalOpened: 0,
+        totalClicked: 0,
+        totalBounced: 0,
+        totalComplained: 0,
+      },
+    );
 
     return {
       templateName,
@@ -284,40 +290,43 @@ export class EmailAnalyticsService {
    */
   async getOverallStatistics(timeRange?: TimeRange): Promise<OverallEmailStatistics> {
     const allAnalytics = Array.from(this.analytics.values());
-    const filteredAnalytics = timeRange 
+    const filteredAnalytics = timeRange
       ? allAnalytics.filter(a => this.isInTimeRange(a.sentAt, timeRange))
       : allAnalytics;
 
-    const stats = filteredAnalytics.reduce((acc, email) => {
-      const events = email.events;
-      
-      acc.totalSent++;
-      acc.totalDelivered += events.filter(e => e.type === 'delivered').length;
-      acc.totalOpened += events.filter(e => e.type === 'opened').length;
-      acc.totalClicked += events.filter(e => e.type === 'clicked').length;
-      acc.totalBounced += events.filter(e => e.type === 'bounced').length;
-      acc.totalComplained += events.filter(e => e.type === 'complained').length;
+    const stats = filteredAnalytics.reduce(
+      (acc, email) => {
+        const events = email.events;
 
-      // Calculate delivery times
-      const sentEvent = events.find(e => e.type === 'sent');
-      const deliveredEvent = events.find(e => e.type === 'delivered');
-      
-      if (sentEvent && deliveredEvent && sentEvent.data?.deliveryTime) {
-        acc.totalDeliveryTime += sentEvent.data.deliveryTime;
-        acc.deliveryTimeCount++;
-      }
+        acc.totalSent++;
+        acc.totalDelivered += events.filter(e => e.type === 'delivered').length;
+        acc.totalOpened += events.filter(e => e.type === 'opened').length;
+        acc.totalClicked += events.filter(e => e.type === 'clicked').length;
+        acc.totalBounced += events.filter(e => e.type === 'bounced').length;
+        acc.totalComplained += events.filter(e => e.type === 'complained').length;
 
-      return acc;
-    }, {
-      totalSent: 0,
-      totalDelivered: 0,
-      totalOpened: 0,
-      totalClicked: 0,
-      totalBounced: 0,
-      totalComplained: 0,
-      totalDeliveryTime: 0,
-      deliveryTimeCount: 0,
-    });
+        // Calculate delivery times
+        const sentEvent = events.find(e => e.type === 'sent');
+        const deliveredEvent = events.find(e => e.type === 'delivered');
+
+        if (sentEvent && deliveredEvent && sentEvent.data?.deliveryTime) {
+          acc.totalDeliveryTime += sentEvent.data.deliveryTime;
+          acc.deliveryTimeCount++;
+        }
+
+        return acc;
+      },
+      {
+        totalSent: 0,
+        totalDelivered: 0,
+        totalOpened: 0,
+        totalClicked: 0,
+        totalBounced: 0,
+        totalComplained: 0,
+        totalDeliveryTime: 0,
+        deliveryTimeCount: 0,
+      },
+    );
 
     return {
       ...stats,
@@ -335,30 +344,31 @@ export class EmailAnalyticsService {
    */
   async getABTestResults(testId: string): Promise<ABTestResults> {
     const allAnalytics = Array.from(this.analytics.values());
-    const testEmails = allAnalytics.filter(a => 
-      a.events.some(e => e.data?.abTestVariant)
+    const testEmails = allAnalytics.filter(a => a.events.some(e => e.data?.abTestVariant));
+
+    const results = testEmails.reduce(
+      (acc, email) => {
+        const sentEvent = email.events.find(e => e.type === 'sent');
+        const variant = sentEvent?.data?.abTestVariant || 'control';
+
+        if (!acc[variant]) {
+          acc[variant] = {
+            sent: 0,
+            delivered: 0,
+            opened: 0,
+            clicked: 0,
+          };
+        }
+
+        acc[variant].sent++;
+        acc[variant].delivered += email.events.filter(e => e.type === 'delivered').length;
+        acc[variant].opened += email.events.filter(e => e.type === 'opened').length;
+        acc[variant].clicked += email.events.filter(e => e.type === 'clicked').length;
+
+        return acc;
+      },
+      {} as Record<string, ABTestVariant>,
     );
-
-    const results = testEmails.reduce((acc, email) => {
-      const sentEvent = email.events.find(e => e.type === 'sent');
-      const variant = sentEvent?.data?.abTestVariant || 'control';
-      
-      if (!acc[variant]) {
-        acc[variant] = {
-          sent: 0,
-          delivered: 0,
-          opened: 0,
-          clicked: 0,
-        };
-      }
-
-      acc[variant].sent++;
-      acc[variant].delivered += email.events.filter(e => e.type === 'delivered').length;
-      acc[variant].opened += email.events.filter(e => e.type === 'opened').length;
-      acc[variant].clicked += email.events.filter(e => e.type === 'clicked').length;
-
-      return acc;
-    }, {} as Record<string, ABTestVariant>);
 
     return {
       testId,
@@ -384,7 +394,7 @@ export class EmailAnalyticsService {
       emailId,
       url: encodeURIComponent(url),
     });
-    
+
     if (linkId) {
       params.set('linkId', linkId);
     }
@@ -421,7 +431,7 @@ export class EmailAnalyticsService {
       // Calculate score based on open rate and click rate
       const openRate = data.delivered > 0 ? (data.opened / data.delivered) * 100 : 0;
       const clickRate = data.opened > 0 ? (data.clicked / data.opened) * 100 : 0;
-      const score = (openRate * 0.6) + (clickRate * 0.4); // Weighted score
+      const score = openRate * 0.6 + clickRate * 0.4; // Weighted score
 
       if (score > bestScore) {
         bestScore = score;

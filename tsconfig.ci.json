@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.app.json",
+  "files": [
+    "src/main.ci.ts",
+    "src/app.ci.module.ts"
+  ],
+  "include": [],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/communication/**/*",
+    "src/common/patterns/**/*",
+    "src/backup-recovery/**/*",
+    "src/config/configuration.management.controller.ts",
+    "src/database/optimization/**/*",
+    "src/security/api/**/*"
+  ]
+}

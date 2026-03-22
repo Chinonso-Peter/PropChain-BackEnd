@@ -3,7 +3,28 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-import { ApiResponse, ApiTags, ApiOperation, ApiBody, ApiParam, ApiExtraModels, ApiOkResponse, ApiBadRequestResponse, ApiNotFoundResponse, ApiConflictResponse, ApiCreatedResponse, ApiBearerAuth, ApiDeprecated, ApiQuery, ApiConsumes, ApiProduces, ApiProperty, ApiPropertyOptional, ApiResponseOptions, ApiVersion } from '@nestjs/swagger';
+import {
+  ApiResponse,
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiParam,
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiBearerAuth,
+  ApiDeprecated,
+  ApiQuery,
+  ApiConsumes,
+  ApiProduces,
+  ApiProperty,
+  ApiPropertyOptional,
+  ApiResponseOptions,
+  ApiVersion,
+} from '@nestjs/swagger';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -14,8 +35,25 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new user', description: 'Register a new user with email, password, and optional profile fields.' })
-  @ApiCreatedResponse({ description: 'User created successfully.', type: UserResponseDto, examples: { success: { value: { id: 'user_abc123', email: 'john.doe@example.com', firstName: 'John', lastName: 'Doe', isEmailVerified: false } } } })
+  @ApiOperation({
+    summary: 'Create a new user',
+    description: 'Register a new user with email, password, and optional profile fields.',
+  })
+  @ApiCreatedResponse({
+    description: 'User created successfully.',
+    type: UserResponseDto,
+    examples: {
+      success: {
+        value: {
+          id: 'user_abc123',
+          email: 'john.doe@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          isEmailVerified: false,
+        },
+      },
+    },
+  })
   @ApiConflictResponse({ description: 'User already exists.' })
   @ApiBadRequestResponse({ description: 'Validation failed.' })
   create(@Body() createUserDto: CreateUserDto) {

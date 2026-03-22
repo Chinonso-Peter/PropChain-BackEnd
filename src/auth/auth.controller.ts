@@ -13,6 +13,7 @@ import {
 } from './dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { Request } from 'express';
+import { ErrorResponseDto } from '../common/errors/error.dto';
 import { ApiStandardErrorResponse } from '../common/errors/api-standard-error-response.decorator';
 
 /**
@@ -27,7 +28,7 @@ import { ApiStandardErrorResponse } from '../common/errors/api-standard-error-re
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   /**
    * Register a new user account

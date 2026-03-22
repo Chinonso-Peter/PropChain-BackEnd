@@ -64,6 +64,21 @@ export class WalletService {
     );
   }
 
+  private getProvider(chain: SupportedChain) {
+    return ProviderFactory.create(chain);
+  }
+
+  private async getNetworkStatus(chain: SupportedChain) {
+    const provider = this.getProvider(chain);
+    const latestBlock = await provider.getBlockNumber();
+
+    return {
+      chain,
+      latestBlock,
+      healthy: true,
+    };
+  }
+
   async checkHealth() {
     const results = [];
 

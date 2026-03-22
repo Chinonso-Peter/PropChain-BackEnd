@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-  HttpCode,
-  UseGuards,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, HttpCode, UseGuards, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DatabaseBackupService } from './database-backup.service';
 import { DocumentBackupService } from './document-backup.service';
@@ -41,7 +31,6 @@ export class BackupRecoveryController {
   @ApiResponse({
     status: 202,
     description: 'Full backup initiated',
-    type: BackupMetadata,
   })
   async performFullBackup(@Body() body?: { tags?: Record<string, string> }): Promise<BackupMetadata> {
     return this.databaseBackupService.performFullBackup(body?.tags);
@@ -101,10 +90,7 @@ export class BackupRecoveryController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<BackupMetadata[]> {
-    return this.documentBackupService.listDocumentBackups(
-      limit ? parseInt(limit) : 50,
-      offset ? parseInt(offset) : 0,
-    );
+    return this.documentBackupService.listDocumentBackups(limit ? parseInt(limit) : 50, offset ? parseInt(offset) : 0);
   }
 
   @Post('documents/backups/:backupId/verify')
@@ -146,9 +132,7 @@ export class BackupRecoveryController {
   @HttpCode(202)
   @ApiOperation({ summary: 'Initiate managed failover' })
   @ApiResponse({ status: 202, description: 'Failover initiated' })
-  async initiateManagedFailover(
-    @Body() body: { planId: string; targetRegion: string },
-  ): Promise<any> {
+  async initiateManagedFailover(@Body() body: { planId: string; targetRegion: string }): Promise<any> {
     if (!body.planId || !body.targetRegion) {
       throw new BadRequestException('planId and targetRegion are required');
     }
@@ -204,10 +188,7 @@ export class BackupRecoveryController {
   @Post('monitoring/alerts/:alertId/acknowledge')
   @HttpCode(200)
   @ApiOperation({ summary: 'Acknowledge alert' })
-  async acknowledgeAlert(
-    @Param('alertId') alertId: string,
-    @Body() body: { acknowledgedBy: string },
-  ): Promise<void> {
+  async acknowledgeAlert(@Param('alertId') alertId: string, @Body() body: { acknowledgedBy: string }): Promise<void> {
     return this.backupMonitoringService.acknowledgeAlert(alertId, body.acknowledgedBy);
   }
 

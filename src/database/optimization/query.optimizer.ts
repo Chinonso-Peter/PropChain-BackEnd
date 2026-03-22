@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Query Optimization Service
- * 
+ *
  * Provides database query optimization and performance monitoring capabilities
  */
 @Injectable()
@@ -88,7 +88,9 @@ export class QueryOptimizerService {
    * Get most frequent queries
    */
   getMostFrequentQueries(limit: number = 10): QueryStats[] {
-    return this.getQueryStats().sort((a, b) => b.count - a.count).slice(0, limit);
+    return this.getQueryStats()
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
   }
 
   /**
@@ -137,7 +139,7 @@ export class QueryOptimizerService {
     if (whereMatch) {
       const whereClause = whereMatch[1];
       const columns = this.extractColumnsFromCondition(whereClause);
-      
+
       for (const column of columns) {
         suggestions.push({
           column,
@@ -153,7 +155,7 @@ export class QueryOptimizerService {
     if (orderByMatch) {
       const orderByClause = orderByMatch[1];
       const columns = orderByClause.split(',').map(col => col.trim().split(' ')[0]);
-      
+
       for (const column of columns) {
         suggestions.push({
           column,
@@ -172,7 +174,7 @@ export class QueryOptimizerService {
         if (onMatch) {
           const onClause = onMatch[1];
           const columns = this.extractColumnsFromCondition(onClause);
-          
+
           for (const column of columns) {
             suggestions.push({
               column,
@@ -233,10 +235,10 @@ export class QueryOptimizerService {
    */
   private extractColumnsFromCondition(condition: string): string[] {
     const columns: string[] = [];
-    
+
     // Match simple column references (table.column or column)
     const columnMatches = condition.match(/(\w+\.\w+|\w+)/g);
-    
+
     if (columnMatches) {
       for (const match of columnMatches) {
         // Filter out SQL keywords and literals
@@ -254,8 +256,25 @@ export class QueryOptimizerService {
    */
   private isSqlKeyword(word: string): boolean {
     const keywords = [
-      'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN', 'IS', 'NULL', 'TRUE', 'FALSE',
-      'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'DISTINCT', 'AS', 'ON', 'USING'
+      'AND',
+      'OR',
+      'NOT',
+      'IN',
+      'LIKE',
+      'BETWEEN',
+      'IS',
+      'NULL',
+      'TRUE',
+      'FALSE',
+      'COUNT',
+      'SUM',
+      'AVG',
+      'MIN',
+      'MAX',
+      'DISTINCT',
+      'AS',
+      'ON',
+      'USING',
     ];
     return keywords.includes(word.toUpperCase());
   }
@@ -290,7 +309,7 @@ export class QueryOptimizerService {
     let hash = 0;
     for (let i = 0; i < query.length; i++) {
       const char = query.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return hash.toString();
@@ -338,7 +357,9 @@ export class QueryOptimizerService {
 
     const mostFrequent = stats.sort((a, b) => b.count - a.count)[0];
     if (mostFrequent && mostFrequent.count > 1000) {
-      recommendations.push(`Query "${mostFrequent.query.substring(0, 50)}..." is executed frequently. Optimize this query.`);
+      recommendations.push(
+        `Query "${mostFrequent.query.substring(0, 50)}..." is executed frequently. Optimize this query.`,
+      );
     }
 
     return recommendations;
@@ -354,7 +375,7 @@ export class QueryOptimizerService {
 }
 
 // Type definitions
-interface QueryStats {
+export interface QueryStats {
   query: string;
   count: number;
   totalTime: number;
@@ -366,7 +387,7 @@ interface QueryStats {
   rowCount?: number;
 }
 
-interface QueryAnalysis {
+export interface QueryAnalysis {
   query: string;
   params?: any[];
   executionTime: number;
@@ -376,14 +397,14 @@ interface QueryAnalysis {
   optimizations: string[];
 }
 
-interface IndexSuggestion {
+export interface IndexSuggestion {
   column: string;
   type: 'btree' | 'hash' | 'gist' | 'gin';
   reason: string;
   priority: 'low' | 'medium' | 'high';
 }
 
-interface OptimizationReport {
+export interface OptimizationReport {
   totalQueries: number;
   slowQueries: number;
   averageExecutionTime: number;

@@ -4,7 +4,7 @@ import { EventEmitter } from 'events';
 
 /**
  * Database Connection Pool Manager
- * 
+ *
  * Manages database connection pooling with optimization and monitoring
  */
 @Injectable()
@@ -61,21 +61,21 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
     try {
       const connection = await this.pool.acquire();
       const waitTime = Date.now() - startTime;
-      
+
       this.updateWaitMetrics(waitTime);
       this.metrics.waitingRequests--;
       this.metrics.activeConnections++;
-      
+
       this.emit('connection:acquired', { connection, waitTime });
-      
+
       return connection;
     } catch (error) {
       this.metrics.failedRequests++;
       this.metrics.waitingRequests--;
       this.metrics.lastError = error instanceof Error ? error.message : String(error);
-      
+
       this.emit('connection:error', { error, waitTime: Date.now() - startTime });
-      
+
       throw error;
     }
   }
@@ -88,7 +88,7 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
       await this.pool.release(connection);
       this.metrics.activeConnections--;
       this.metrics.idleConnections++;
-      
+
       this.emit('connection:released', { connection });
     } catch (error) {
       this.metrics.connectionErrors++;
@@ -108,11 +108,10 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
    * Get pool status
    */
   getPoolStatus(): PoolStatus {
-    const utilization = this.metrics.totalConnections > 0 ? 
-      this.metrics.activeConnections / this.metrics.totalConnections : 0;
-    
-    const errorRate = this.metrics.totalRequests > 0 ? 
-      this.metrics.failedRequests / this.metrics.totalRequests : 0;
+    const utilization =
+      this.metrics.totalConnections > 0 ? this.metrics.activeConnections / this.metrics.totalConnections : 0;
+
+    const errorRate = this.metrics.totalRequests > 0 ? this.metrics.failedRequests / this.metrics.totalRequests : 0;
 
     return {
       status: this.getPoolHealthStatus(utilization, errorRate),
@@ -136,7 +135,7 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
 
     // Analyze connection usage
     const avgUtilization = this.calculateAverageUtilization();
-    
+
     if (avgUtilization > 0.8 && this.config.max < 20) {
       // High utilization, consider increasing max connections
       const newMax = Math.min(this.config.max * 2, 20);
@@ -161,9 +160,9 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
     }
 
     // Analyze error rate
-    const errorRate = currentMetrics.totalRequests > 0 ? 
-      currentMetrics.failedRequests / currentMetrics.totalRequests : 0;
-    
+    const errorRate =
+      currentMetrics.totalRequests > 0 ? currentMetrics.failedRequests / currentMetrics.totalRequests : 0;
+
     if (errorRate > 0.05) {
       // High error rate, consider increasing timeouts
       this.config.acquireTimeoutMillis = Math.min(this.config.acquireTimeoutMillis * 1.5, 60000);
@@ -213,9 +212,9 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
     try {
       // This would initialize the actual database connection pool
       // For now, we'll simulate it
-      
+
       this.logger.log(`Initializing connection pool with min=${this.config.min}, max=${this.config.max}`);
-      
+
       // Simulate pool creation
       this.pool = {
         acquire: this.mockAcquire.bind(this),
@@ -225,7 +224,7 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
 
       this.metrics.totalConnections = this.config.min;
       this.metrics.idleConnections = this.config.min;
-      
+
       this.logger.log('Connection pool initialized successfully');
     } catch (error) {
       this.logger.error('Failed to initialize connection pool:', error);
@@ -271,10 +270,10 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
    */
   private updateMetrics(): void {
     this.metrics.timestamp = new Date();
-    
+
     // This would collect actual metrics from the pool
     // For now, we'll simulate some basic updates
-    
+
     // Emit metrics event
     this.emit('metrics', this.metrics);
   }
@@ -284,7 +283,7 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
    */
   private checkPoolHealth(): void {
     const status = this.getPoolStatus();
-    
+
     if (status.status === 'critical') {
       this.emit('alert', {
         type: 'POOL_CRITICAL',
@@ -319,8 +318,7 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
   private calculateAverageUtilization(): number {
     // This would calculate based on historical data
     // For now, return current utilization
-    return this.metrics.totalConnections > 0 ? 
-      this.metrics.activeConnections / this.metrics.totalConnections : 0;
+    return this.metrics.totalConnections > 0 ? this.metrics.activeConnections / this.metrics.totalConnections : 0;
   }
 
   /**
@@ -328,11 +326,10 @@ export class ConnectionPoolService extends EventEmitter implements OnModuleInit,
    */
   private updateWaitMetrics(waitTime: number): void {
     this.metrics.maxWaitTime = Math.max(this.metrics.maxWaitTime, waitTime);
-    
+
     // Update average wait time
     const totalRequests = this.metrics.totalRequests;
-    this.metrics.avgWaitTime = 
-      (this.metrics.avgWaitTime * (totalRequests - 1) + waitTime) / totalRequests;
+    this.metrics.avgWaitTime = (this.metrics.avgWaitTime * (totalRequests - 1) + waitTime) / totalRequests;
   }
 
   /**
@@ -379,7 +376,7 @@ interface PoolConfig {
   createRetryIntervalMillis: number;
 }
 
-interface PoolMetrics {
+export interface PoolMetrics {
   totalConnections: number;
   activeConnections: number;
   idleConnections: number;
@@ -393,7 +390,7 @@ interface PoolMetrics {
   timestamp: Date;
 }
 
-interface PoolStatus {
+export interface PoolStatus {
   status: 'healthy' | 'warning' | 'critical';
   utilization: number;
   errorRate: number;
@@ -404,7 +401,7 @@ interface PoolStatus {
   waitingRequests: number;
 }
 
-interface PoolOptimizationResult {
+export interface PoolOptimizationResult {
   optimized: boolean;
   optimizations: string[];
   previousConfig: PoolConfig;

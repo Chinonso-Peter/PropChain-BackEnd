@@ -116,4 +116,18 @@ export class PaginationService {
       },
     };
   }
+
+  // Backward compatibility wrappers used in existing tests
+  getSkip(page: number, limit: number): number {
+    return this.calculatePagination(page, limit).skip;
+  }
+
+  createMeta(total: number, page: number, limit: number) {
+    const metadata = this.createMetadata(total, page, limit);
+    return metadata;
+  }
+
+  createResponse<T>(data: T[], total: number, paginationDto: PaginationQueryDto) {
+    return this.formatResponse(data, total, paginationDto);
+  }
 }

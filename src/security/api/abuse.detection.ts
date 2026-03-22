@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * API Abuse Detection Service
- * 
+ *
  * Detects and prevents various forms of API abuse
  */
 @Injectable()
@@ -56,7 +56,9 @@ export class AbuseDetectionService {
    */
   private checkRateLimiting(clientIp: string, endpoint: string, analysis: AbuseAnalysis): void {
     const tracker = this.abuseTracker.get(clientIp);
-    if (!tracker) return;
+    if (!tracker) {
+      return;
+    }
 
     const now = Date.now();
     const windowSize = 60 * 1000; // 1 minute window
@@ -65,7 +67,7 @@ export class AbuseDetectionService {
     // Get rate limit for endpoint
     const rateLimit = this.getRateLimitForEndpoint(endpoint);
     const limit = rateLimit.requestsPerMinute;
-    
+
     if (recentRequests.length > limit) {
       analysis.violations.push({
         type: 'RATE_LIMIT_EXCEEDED',
@@ -83,14 +85,16 @@ export class AbuseDetectionService {
    */
   private checkBurstRequests(clientIp: string, analysis: AbuseAnalysis): void {
     const tracker = this.abuseTracker.get(clientIp);
-    if (!tracker) return;
+    if (!tracker) {
+      return;
+    }
 
     const now = Date.now();
     const burstWindow = 10 * 1000; // 10 seconds
     const recentRequests = tracker.requests.filter(time => now - time < burstWindow);
 
     const maxBurst = this.configService.get<number>('MAX_BURST_REQUESTS', 30);
-    
+
     if (recentRequests.length > maxBurst) {
       analysis.violations.push({
         type: 'BURST_DETECTED',
@@ -108,9 +112,9 @@ export class AbuseDetectionService {
    */
   private checkPayloadSize(request: any, analysis: AbuseAnalysis): void {
     const maxPayloadSize = this.configService.get<number>('MAX_PAYLOAD_SIZE', 10 * 1024 * 1024); // 10MB
-    
+
     let payloadSize = 0;
-    
+
     if (request.body) {
       payloadSize = JSON.stringify(request.body).length;
     }
@@ -132,16 +136,12 @@ export class AbuseDetectionService {
    */
   private checkEndpointAbuse(clientIp: string, endpoint: string, analysis: AbuseAnalysis): void {
     const tracker = this.abuseTracker.get(clientIp);
-    if (!tracker) return;
+    if (!tracker) {
+      return;
+    }
 
     // Check for abuse on sensitive endpoints
-    const sensitiveEndpoints = [
-      '/auth/login',
-      '/auth/register',
-      '/auth/forgot-password',
-      '/api/keys',
-      '/api/users',
-    ];
+    const sensitiveEndpoints = ['/auth/login', '/auth/register', '/auth/forgot-password', '/api/keys', '/api/users'];
 
     if (sensitiveEndpoints.some(ep => endpoint.includes(ep))) {
       const now = Date.now();
@@ -149,7 +149,7 @@ export class AbuseDetectionService {
       const recentRequests = tracker.requests.filter(time => now - time < hourWindow);
 
       const maxSensitiveRequests = this.configService.get<number>('MAX_SENSITIVE_REQUESTS_PER_HOUR', 100);
-      
+
       if (recentRequests.length > maxSensitiveRequests) {
         analysis.violations.push({
           type: 'SENSITIVE_ENDPOINT_ABUSE',
@@ -168,14 +168,16 @@ export class AbuseDetectionService {
    */
   private checkGlobalLimits(clientIp: string, analysis: AbuseAnalysis): void {
     const tracker = this.abuseTracker.get(clientIp);
-    if (!tracker) return;
+    if (!tracker) {
+      return;
+    }
 
     const now = Date.now();
     const dayWindow = 24 * 60 * 60 * 1000; // 24 hours
     const dailyRequests = tracker.requests.filter(time => now - time < dayWindow);
 
     const maxDailyRequests = this.configService.get<number>('MAX_DAILY_REQUESTS', 10000);
-    
+
     if (dailyRequests.length > maxDailyRequests) {
       analysis.violations.push({
         type: 'DAILY_LIMIT_EXCEEDED',
@@ -194,7 +196,9 @@ export class AbuseDetectionService {
    */
   private checkBehavioralPatterns(clientIp: string, request: any, analysis: AbuseAnalysis): void {
     const tracker = this.abuseTracker.get(clientIp);
-    if (!tracker || tracker.requests.length < 20) return;
+    if (!tracker || tracker.requests.length < 20) {
+      return;
+    }
 
     // Check for automated behavior patterns
     const intervals = this.calculateRequestIntervals(tracker.requests);
@@ -202,7 +206,8 @@ export class AbuseDetectionService {
     const variance = this.calculateVariance(intervals, avgInterval);
 
     // Very consistent intervals suggest automation
-    if (variance < 100) { // Low variance
+    if (variance < 100) {
+      // Low variance
       analysis.violations.push({
         type: 'AUTOMATED_BEHAVIOR',
         severity: 'medium',
@@ -234,7 +239,7 @@ export class AbuseDetectionService {
    */
   private updateAbuseTracker(clientIp: string, request: any, analysis: AbuseAnalysis): void {
     const now = Date.now();
-    
+
     if (!this.abuseTracker.has(clientIp)) {
       this.abuseTracker.set(clientIp, {
         ip: clientIp,
@@ -285,11 +290,11 @@ export class AbuseDetectionService {
    */
   private calculateRequestIntervals(requests: number[]): number[] {
     const intervals: number[] = [];
-    
+
     for (let i = 1; i < requests.length; i++) {
       intervals.push(requests[i] - requests[i - 1]);
     }
-    
+
     return intervals;
   }
 
@@ -306,11 +311,13 @@ export class AbuseDetectionService {
    * Get client IP
    */
   private getClientIp(request: any): string {
-    return request.ip ||
-           request.connection.remoteAddress ||
-           request.socket.remoteAddress ||
-           (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-           '0.0.0.0';
+    return (
+      request.ip ||
+      request.connection.remoteAddress ||
+      request.socket.remoteAddress ||
+      (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      '0.0.0.0'
+    );
   }
 
   /**
@@ -318,8 +325,7 @@ export class AbuseDetectionService {
    */
   getAbuseStatistics(): AbuseStatistics {
     const now = Date.now();
-    const recentTrackers = Array.from(this.abuseTracker.values())
-      .filter(tracker => now - tracker.lastSeen < 3600000); // Last hour
+    const recentTrackers = Array.from(this.abuseTracker.values()).filter(tracker => now - tracker.lastSeen < 3600000); // Last hour
 
     const totalRequests = recentTrackers.reduce((sum, tracker) => sum + tracker.requests.length, 0);
     const totalViolations = recentTrackers.reduce((sum, tracker) => sum + tracker.violations.length, 0);
@@ -344,7 +350,7 @@ export class AbuseDetectionService {
       tracker.blocked = true;
       tracker.blockReason = reason;
       tracker.blockedAt = Date.now();
-      
+
       if (duration) {
         tracker.blockUntil = Date.now() + duration;
       }
@@ -377,12 +383,12 @@ export class AbuseDetectionService {
       requestsPerMinute: 10,
       requestsPerHour: 100,
     });
-    
+
     this.globalLimits.set('/api/keys', {
       requestsPerMinute: 5,
       requestsPerHour: 50,
     });
-    
+
     this.globalLimits.set('/api/users', {
       requestsPerMinute: 20,
       requestsPerHour: 200,
@@ -393,31 +399,34 @@ export class AbuseDetectionService {
    * Start cleanup process
    */
   private startCleanup(): void {
-    setInterval(() => {
-      const now = Date.now();
-      const cutoff = now - 24 * 60 * 60 * 1000; // 24 hours ago
+    setInterval(
+      () => {
+        const now = Date.now();
+        const cutoff = now - 24 * 60 * 60 * 1000; // 24 hours ago
 
-      for (const [ip, tracker] of this.abuseTracker.entries()) {
-        // Remove old trackers
-        if (tracker.lastSeen < cutoff) {
-          this.abuseTracker.delete(ip);
-          continue;
-        }
+        for (const [ip, tracker] of this.abuseTracker.entries()) {
+          // Remove old trackers
+          if (tracker.lastSeen < cutoff) {
+            this.abuseTracker.delete(ip);
+            continue;
+          }
 
-        // Unblock expired blocks
-        if (tracker.blocked && tracker.blockUntil && now > tracker.blockUntil) {
-          delete tracker.blocked;
-          delete tracker.blockReason;
-          delete tracker.blockedAt;
-          delete tracker.blockUntil;
-        }
+          // Unblock expired blocks
+          if (tracker.blocked && tracker.blockUntil && now > tracker.blockUntil) {
+            delete tracker.blocked;
+            delete tracker.blockReason;
+            delete tracker.blockedAt;
+            delete tracker.blockUntil;
+          }
 
-        // Keep only last 1000 requests
-        if (tracker.requests.length > 1000) {
-          tracker.requests = tracker.requests.slice(-1000);
+          // Keep only last 1000 requests
+          if (tracker.requests.length > 1000) {
+            tracker.requests = tracker.requests.slice(-1000);
+          }
         }
-      }
-    }, 60 * 60 * 1000); // Every hour
+      },
+      60 * 60 * 1000,
+    ); // Every hour
   }
 }
 

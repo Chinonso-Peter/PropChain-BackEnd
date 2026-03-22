@@ -15,7 +15,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     private readonly configService: ConfigService,
     private readonly loggerService: StructuredLoggerService,
     private readonly i18n: I18nService,
-  ) { }
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -87,7 +87,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         errorCode = this.mapStatusToErrorCode(status);
         const translatedMessage = this.i18n.translate(`errors.${errorCode}`, { lang }) as string;
         // fallback to standard message if translation key returns itself or we didn't translate
-        message = responseObj.message || (translatedMessage !== `errors.${errorCode}` ? translatedMessage : ErrorMessages[errorCode]);
+        message =
+          responseObj.message ||
+          (translatedMessage !== `errors.${errorCode}` ? translatedMessage : ErrorMessages[errorCode]);
         details = responseObj.details;
       }
     } else {

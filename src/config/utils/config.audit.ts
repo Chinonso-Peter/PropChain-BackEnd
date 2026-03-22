@@ -62,7 +62,14 @@ export class ConfigAuditService {
   /**
    * Log configuration update
    */
-  async logUpdate(key: string, oldValue: string, newValue: string, userId?: string, ipAddress?: string, userAgent?: string): Promise<void> {
+  async logUpdate(
+    key: string,
+    oldValue: string,
+    newValue: string,
+    userId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
     await this.writeAuditLog({
       action: 'update',
       key,
@@ -78,7 +85,13 @@ export class ConfigAuditService {
   /**
    * Log configuration deletion
    */
-  async logDelete(key: string, oldValue: string, userId?: string, ipAddress?: string, userAgent?: string): Promise<void> {
+  async logDelete(
+    key: string,
+    oldValue: string,
+    userId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
     await this.writeAuditLog({
       action: 'delete',
       key,
@@ -93,7 +106,13 @@ export class ConfigAuditService {
   /**
    * Log configuration rollback
    */
-  async logRollback(versionId: string, changes: Array<{ key: string; oldValue: string; newValue: string }>, userId?: string, ipAddress?: string, userAgent?: string): Promise<void> {
+  async logRollback(
+    versionId: string,
+    changes: Array<{ key: string; oldValue: string; newValue: string }>,
+    userId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
     await this.writeAuditLog({
       action: 'rollback',
       versionId,
@@ -115,28 +134,40 @@ export class ConfigAuditService {
   /**
    * Get audit logs
    */
-  async getAuditLogs(options: {
-    startDate?: Date;
-    endDate?: Date;
-    action?: string;
-    key?: string;
-    userId?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<ConfigAuditLog[]> {
+  async getAuditLogs(
+    options: {
+      startDate?: Date;
+      endDate?: Date;
+      action?: string;
+      key?: string;
+      userId?: string;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Promise<ConfigAuditLog[]> {
     const logs: ConfigAuditLog[] = [];
     const auditFiles = this.getAuditFiles();
 
     for (const file of auditFiles) {
       const fileLogs = await this.readAuditFile(file);
-      
+
       for (const log of fileLogs) {
         // Apply filters
-        if (options.startDate && new Date(log.timestamp) < options.startDate) continue;
-        if (options.endDate && new Date(log.timestamp) > options.endDate) continue;
-        if (options.action && log.action !== options.action) continue;
-        if (options.key && log.key !== options.key) continue;
-        if (options.userId && log.userId !== options.userId) continue;
+        if (options.startDate && new Date(log.timestamp) < options.startDate) {
+          continue;
+        }
+        if (options.endDate && new Date(log.timestamp) > options.endDate) {
+          continue;
+        }
+        if (options.action && log.action !== options.action) {
+          continue;
+        }
+        if (options.key && log.key !== options.key) {
+          continue;
+        }
+        if (options.userId && log.userId !== options.userId) {
+          continue;
+        }
 
         logs.push(log);
       }
@@ -196,11 +227,14 @@ export class ConfigAuditService {
   /**
    * Export audit logs
    */
-  async exportAuditLogs(outputPath: string, options: {
-    startDate?: Date;
-    endDate?: Date;
-    format?: 'json' | 'csv';
-  } = {}): Promise<void> {
+  async exportAuditLogs(
+    outputPath: string,
+    options: {
+      startDate?: Date;
+      endDate?: Date;
+      format?: 'json' | 'csv';
+    } = {},
+  ): Promise<void> {
     const logs = await this.getAuditLogs(options);
     const format = options.format || 'json';
 
@@ -225,7 +259,7 @@ export class ConfigAuditService {
       ...logData,
     };
 
-    const logEntry = JSON.stringify(log) + '\n';
+    const logEntry = `${JSON.stringify(log)}\n`;
     fs.appendFileSync(this.currentLogFile, logEntry);
 
     // Rotate log file if it gets too large
@@ -237,11 +271,11 @@ export class ConfigAuditService {
    */
   private async readAuditFile(filePath: string): Promise<ConfigAuditLog[]> {
     const logs: ConfigAuditLog[] = [];
-    
+
     try {
       const content = fs.readFileSync(filePath, 'utf8');
       const lines = content.split('\n').filter(line => line.trim());
-      
+
       for (const line of lines) {
         try {
           const log = JSON.parse(line) as ConfigAuditLog;
@@ -252,7 +286,10 @@ export class ConfigAuditService {
         }
       }
     } catch (error) {
-      this.logger.warn(`Failed to read audit file ${filePath}:`, error instanceof Error ? error.message : String(error));
+      this.logger.warn(
+        `Failed to read audit file ${filePath}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     return logs;
@@ -342,10 +379,10 @@ export class ConfigAuditService {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const newLogFile = path.join(this.auditDir, `audit-${timestamp}.log`);
         fs.renameSync(this.currentLogFile, newLogFile);
-        
+
         // Update current log file
         this.currentLogFile = this.getCurrentLogFile();
-        
+
         // Clean up old files
         await this.cleanupOldAuditFiles();
       }
@@ -359,19 +396,22 @@ export class ConfigAuditService {
    */
   private async cleanupOldAuditFiles(): Promise<void> {
     const files = this.getAuditFiles();
-    
+
     if (files.length <= this.maxAuditFiles) {
       return;
     }
 
     const filesToDelete = files.slice(this.maxAuditFiles);
-    
+
     for (const file of filesToDelete) {
       try {
         fs.unlinkSync(file);
         this.logger.debug(`Deleted old audit file: ${file}`);
       } catch (error) {
-        this.logger.warn(`Failed to delete audit file ${file}:`, error instanceof Error ? error.message : String(error));
+        this.logger.warn(
+          `Failed to delete audit file ${file}:`,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
 
@@ -410,10 +450,7 @@ export class ConfigAuditService {
       log.description,
     ]);
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
-    ].join('\n');
+    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
 
     return csvContent;
   }

@@ -221,8 +221,16 @@ export class ApiKeyService {
   }
 
   private decryptKey(encryptedKey: string): string {
-    const bytes = CryptoJS.AES.decrypt(encryptedKey, this.encryptionKey);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    try {
+      const bytes = CryptoJS.AES.decrypt(encryptedKey, this.encryptionKey);
+      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      if (!decrypted) {
+        throw new UnauthorizedException('Invalid API key format');
+      }
+      return decrypted;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid API key format');
+    }
   }
 
   private validateScopes(scopes: string[]): void {

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Database Index Strategy Service
- * 
+ *
  * Manages database index creation, monitoring, and optimization
  */
 @Injectable()
@@ -17,21 +17,22 @@ export class IndexStrategyService {
    */
   analyzeTableIndexes(tableName: string, tableStats: TableStats): IndexAnalysis {
     const suggestions: IndexSuggestion[] = [];
-    
+
     // Analyze WHERE clause patterns
     suggestions.push(...this.analyzeWherePatterns(tableName, tableStats));
-    
+
     // Analyze JOIN patterns
     suggestions.push(...this.analyzeJoinPatterns(tableName, tableStats));
-    
+
     // Analyze ORDER BY patterns
     suggestions.push(...this.analyzeOrderByPatterns(tableName, tableStats));
-    
+
     // Analyze GROUP BY patterns
     suggestions.push(...this.analyzeGroupByPatterns(tableName, tableStats));
 
     return {
       tableName,
+      tableStats,
       currentIndexes: tableStats.indexes,
       suggestions,
       unusedIndexes: this.findUnusedIndexes(tableStats),
@@ -46,24 +47,24 @@ export class IndexStrategyService {
   generateCreateIndexSQL(suggestion: IndexSuggestion): string {
     const indexName = this.generateIndexName(suggestion.tableName, suggestion.columns, suggestion.type);
     const columns = suggestion.columns.join(', ');
-    
+
     let sql = `CREATE INDEX ${indexName} ON ${suggestion.tableName}`;
-    
+
     if (suggestion.type !== 'btree') {
       sql += ` USING ${suggestion.type}`;
     }
-    
+
     sql += ` (${columns})`;
-    
+
     if (suggestion.where) {
       sql += ` WHERE ${suggestion.where}`;
     }
-    
+
     if (suggestion.concurrently) {
       sql = `CREATE CONCURRENTLY${sql.substring('CREATE'.length)}`;
     }
-    
-    return sql + ';';
+
+    return `${sql};`;
   }
 
   /**
@@ -80,10 +81,10 @@ export class IndexStrategyService {
     const avgRowSize = tableStats.avgRowSize || 1000; // bytes
     const rowCount = tableStats.rowCount;
     const indexOverhead = 1.1; // 10% overhead
-    
+
     // Base size calculation
     let indexSize = rowCount * avgRowSize * indexOverhead;
-    
+
     // Adjust based on index type
     switch (suggestion.type) {
       case 'hash':
@@ -99,16 +100,16 @@ export class IndexStrategyService {
         // B-tree is baseline
         break;
     }
-    
+
     // Adjust for partial indexes
     if (suggestion.where) {
       const selectivity = this.estimateSelectivity(suggestion.where);
       indexSize *= selectivity;
     }
-    
+
     return {
       estimatedSizeBytes: Math.round(indexSize),
-      estimatedSizeMB: Math.round(indexSize / 1024 / 1024 * 100) / 100,
+      estimatedSizeMB: Math.round((indexSize / 1024 / 1024) * 100) / 100,
       growthRate: this.estimateGrowthRate(tableStats),
     };
   }
@@ -118,12 +119,12 @@ export class IndexStrategyService {
    */
   private analyzeWherePatterns(tableName: string, stats: TableStats): IndexSuggestion[] {
     const suggestions: IndexSuggestion[] = [];
-    
+
     // Analyze query patterns from stats
     for (const pattern of stats.queryPatterns || []) {
       if (pattern.type === 'where') {
         const columns = this.extractColumnsFromCondition(pattern.condition);
-        
+
         if (columns.length > 0) {
           suggestions.push({
             tableName,
@@ -136,7 +137,7 @@ export class IndexStrategyService {
         }
       }
     }
-    
+
     return suggestions;
   }
 
@@ -145,11 +146,11 @@ export class IndexStrategyService {
    */
   private analyzeJoinPatterns(tableName: string, stats: TableStats): IndexSuggestion[] {
     const suggestions: IndexSuggestion[] = [];
-    
+
     for (const pattern of stats.queryPatterns || []) {
       if (pattern.type === 'join') {
         const columns = this.extractColumnsFromCondition(pattern.condition);
-        
+
         if (columns.length > 0) {
           suggestions.push({
             tableName,
@@ -162,7 +163,7 @@ export class IndexStrategyService {
         }
       }
     }
-    
+
     return suggestions;
   }
 
@@ -171,11 +172,11 @@ export class IndexStrategyService {
    */
   private analyzeOrderByPatterns(tableName: string, stats: TableStats): IndexSuggestion[] {
     const suggestions: IndexSuggestion[] = [];
-    
+
     for (const pattern of stats.queryPatterns || []) {
       if (pattern.type === 'orderBy') {
         const columns = pattern.columns || [];
-        
+
         if (columns.length > 0) {
           suggestions.push({
             tableName,
@@ -188,7 +189,7 @@ export class IndexStrategyService {
         }
       }
     }
-    
+
     return suggestions;
   }
 
@@ -197,11 +198,11 @@ export class IndexStrategyService {
    */
   private analyzeGroupByPatterns(tableName: string, stats: TableStats): IndexSuggestion[] {
     const suggestions: IndexSuggestion[] = [];
-    
+
     for (const pattern of stats.queryPatterns || []) {
       if (pattern.type === 'groupBy') {
         const columns = pattern.columns || [];
-        
+
         if (columns.length > 0) {
           suggestions.push({
             tableName,
@@ -214,7 +215,7 @@ export class IndexStrategyService {
         }
       }
     }
-    
+
     return suggestions;
   }
 
@@ -223,7 +224,7 @@ export class IndexStrategyService {
    */
   private findUnusedIndexes(stats: TableStats): UnusedIndex[] {
     const unused: UnusedIndex[] = [];
-    
+
     for (const index of stats.indexes || []) {
       if (index.usageCount === 0 || (index.lastUsed && this.isIndexOld(index.lastUsed))) {
         unused.push({
@@ -235,7 +236,7 @@ export class IndexStrategyService {
         });
       }
     }
-    
+
     return unused;
   }
 
@@ -244,7 +245,7 @@ export class IndexStrategyService {
    */
   private findMissingIndexes(stats: TableStats): MissingIndex[] {
     const missing: MissingIndex[] = [];
-    
+
     // This would analyze actual query logs to find missing indexes
     // For now, return placeholder
     return missing;
@@ -256,7 +257,7 @@ export class IndexStrategyService {
   private findDuplicateIndexes(stats: TableStats): DuplicateIndex[] {
     const duplicates: DuplicateIndex[] = [];
     const indexGroups = new Map<string, typeof stats.indexes>();
-    
+
     // Group indexes by their column sets
     for (const index of stats.indexes || []) {
       const key = index.columns.sort().join(',');
@@ -265,7 +266,7 @@ export class IndexStrategyService {
       }
       indexGroups.get(key)!.push(index);
     }
-    
+
     // Find duplicates
     for (const [columns, indexes] of indexGroups.entries()) {
       if (indexes.length > 1) {
@@ -276,7 +277,7 @@ export class IndexStrategyService {
         });
       }
     }
-    
+
     return duplicates;
   }
 
@@ -294,9 +295,13 @@ export class IndexStrategyService {
    */
   private calculatePriority(frequency: number, impact: number): 'low' | 'medium' | 'high' {
     const score = frequency * impact;
-    
-    if (score > 100) return 'high';
-    if (score > 10) return 'medium';
+
+    if (score > 100) {
+      return 'high';
+    }
+    if (score > 10) {
+      return 'medium';
+    }
     return 'low';
   }
 
@@ -305,10 +310,10 @@ export class IndexStrategyService {
    */
   private extractColumnsFromCondition(condition: string): string[] {
     const columns: string[] = [];
-    
+
     // Simple regex to extract column references
     const matches = condition.match(/(\w+\.\w+|\w+)/g);
-    
+
     if (matches) {
       for (const match of matches) {
         if (!this.isSqlKeyword(match) && !this.isLiteral(match)) {
@@ -316,7 +321,7 @@ export class IndexStrategyService {
         }
       }
     }
-    
+
     return columns;
   }
 
@@ -325,8 +330,25 @@ export class IndexStrategyService {
    */
   private isSqlKeyword(word: string): boolean {
     const keywords = [
-      'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN', 'IS', 'NULL', 'TRUE', 'FALSE',
-      'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'DISTINCT', 'AS', 'ON', 'USING'
+      'AND',
+      'OR',
+      'NOT',
+      'IN',
+      'LIKE',
+      'BETWEEN',
+      'IS',
+      'NULL',
+      'TRUE',
+      'FALSE',
+      'COUNT',
+      'SUM',
+      'AVG',
+      'MIN',
+      'MAX',
+      'DISTINCT',
+      'AS',
+      'ON',
+      'USING',
     ];
     return keywords.includes(word.toUpperCase());
   }
@@ -364,13 +386,13 @@ export class IndexStrategyService {
     if (stats.growthHistory && stats.growthHistory.length > 1) {
       const recent = stats.growthHistory.slice(-30); // Last 30 days
       const older = stats.growthHistory.slice(-60, -30); // Previous 30 days
-      
+
       const recentGrowth = recent[recent.length - 1].rowCount - recent[0].rowCount;
       const olderGrowth = older[older.length - 1].rowCount - older[0].rowCount;
-      
+
       return olderGrowth > 0 ? recentGrowth / olderGrowth : 0;
     }
-    
+
     return 0.1; // Default 10% growth
   }
 
@@ -416,14 +438,15 @@ export class IndexStrategyService {
 
     // Calculate overall impact and time
     plan.estimatedImpact = plan.createIndexes.reduce((sum, idx) => sum + idx.estimatedBenefit, 0);
-    plan.estimatedTime = plan.createIndexes.reduce((sum, idx) => sum + idx.estimatedTime, 0) +
-                        plan.dropIndexes.reduce((sum, idx) => sum + idx.estimatedTime, 0);
+    plan.estimatedTime =
+      plan.createIndexes.reduce((sum, idx) => sum + idx.estimatedTime, 0) +
+      plan.dropIndexes.reduce((sum, idx) => sum + idx.estimatedTime, 0);
 
     // Add risks
     if (plan.createIndexes.length > 5) {
       plan.risks.push('Creating many indexes at once may impact performance');
     }
-    
+
     if (plan.dropIndexes.length > 0) {
       plan.risks.push('Dropping indexes may affect query performance');
     }
@@ -438,7 +461,7 @@ export class IndexStrategyService {
     const baseTime = 1000; // 1 second base time
     const rowCount = stats.rowCount;
     const columnCount = suggestion.columns.length;
-    
+
     // More rows and columns take longer
     return baseTime + (rowCount / 100000) * 500 * columnCount;
   }
@@ -481,7 +504,7 @@ interface QueryPattern {
   avgImpact: number;
 }
 
-interface IndexSuggestion {
+export interface IndexSuggestion {
   tableName: string;
   columns: string[];
   type: 'btree' | 'hash' | 'gist' | 'gin';
@@ -492,8 +515,9 @@ interface IndexSuggestion {
   concurrently?: boolean;
 }
 
-interface IndexAnalysis {
+export interface IndexAnalysis {
   tableName: string;
+  tableStats: TableStats;
   currentIndexes: IndexInfo[];
   suggestions: IndexSuggestion[];
   unusedIndexes: UnusedIndex[];
@@ -501,7 +525,7 @@ interface IndexAnalysis {
   duplicateIndexes: DuplicateIndex[];
 }
 
-interface UnusedIndex {
+export interface UnusedIndex {
   name: string;
   columns: string[];
   size: number;
@@ -509,25 +533,25 @@ interface UnusedIndex {
   reason: string;
 }
 
-interface MissingIndex {
+export interface MissingIndex {
   columns: string[];
   reason: string;
   estimatedBenefit: number;
 }
 
-interface DuplicateIndex {
+export interface DuplicateIndex {
   columns: string[];
   indexes: string[];
   recommendation: string;
 }
 
-interface IndexSizeEstimate {
+export interface IndexSizeEstimate {
   estimatedSizeBytes: number;
   estimatedSizeMB: number;
   growthRate: number;
 }
 
-interface IndexOptimizationPlan {
+export interface IndexOptimizationPlan {
   createIndexes: Array<{
     tableName: string;
     columns: string[];

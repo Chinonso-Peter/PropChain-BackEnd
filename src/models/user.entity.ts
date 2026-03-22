@@ -21,9 +21,9 @@ export class User implements PrismaUser {
   updatedAt: Date;
 
   // Advanced profile fields
-  bio?: string | null;
-  location?: string | null;
-  avatarUrl?: string | null;
+  bio: string | null;
+  location: string | null;
+  avatarUrl: string | null;
 
   // Preferences and privacy
   preferences?: any | null;
@@ -31,11 +31,11 @@ export class User implements PrismaUser {
   exportRequestedAt?: Date | null;
 
   // Relationships
-  followers?: UserRelationship[];
-  following?: UserRelationship[];
+  followers?: any[];
+  following?: any[];
 
   // Activity
-  activities?: UserActivity[];
+  activities?: any[];
 }
 
 /**

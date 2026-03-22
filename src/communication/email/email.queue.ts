@@ -1,19 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bull';
+import Bull from 'bull';
 import { getQueueToken } from '@nestjs/bull';
 
 /**
  * Email Queue Service
- * 
+ *
  * Handles email queuing, scheduling, and batch processing
  */
 @Injectable()
 export class EmailQueueService {
   private readonly logger = new Logger(EmailQueueService.name);
-  private emailQueue: Queue;
-  private batchQueue: Queue;
-  private priorityQueue: Queue;
+  private emailQueue: Bull.Queue;
+  private batchQueue: Bull.Queue;
+  private priorityQueue: Bull.Queue;
 
   constructor(private readonly configService: ConfigService) {
     this.initializeQueues();
@@ -22,13 +22,9 @@ export class EmailQueueService {
   /**
    * Add email to queue
    */
-  async add<T = any>(
-    queueName: string,
-    data: T,
-    options?: any,
-  ): Promise<string> {
+  async add<T = any>(queueName: string, data: T, options?: any): Promise<string> {
     const queue = this.getQueue(queueName);
-    
+
     try {
       const job = await queue.add(data, {
         attempts: options?.attempts || 3,
@@ -67,7 +63,7 @@ export class EmailQueueService {
    */
   async addScheduled(emailData: any, scheduledFor: Date): Promise<string> {
     const delay = scheduledFor.getTime() - Date.now();
-    
+
     if (delay <= 0) {
       return this.add('default', emailData);
     }
@@ -94,7 +90,7 @@ export class EmailQueueService {
    */
   async processEmailJob(job: any): Promise<EmailJobResult> {
     const startTime = Date.now();
-    
+
     try {
       this.logger.log(`Processing email job`, {
         jobId: job.id,
@@ -118,7 +114,7 @@ export class EmailQueueService {
       }
 
       const processingTime = Date.now() - startTime;
-      
+
       this.logger.log(`Email job completed successfully`, {
         jobId: job.id,
         processingTime,
@@ -153,7 +149,7 @@ export class EmailQueueService {
    */
   async getQueueStats(queueName: string): Promise<QueueStats> {
     const queue = this.getQueue(queueName);
-    
+
     try {
       const waiting = await queue.getWaiting();
       const active = await queue.getActive();
@@ -196,6 +192,7 @@ export class EmailQueueService {
       priority: priorityStats,
       batch: batchStats,
       total: {
+        queueName: 'total',
         waiting: defaultStats.waiting + priorityStats.waiting + batchStats.waiting,
         active: defaultStats.active + priorityStats.active + batchStats.active,
         completed: defaultStats.completed + priorityStats.completed + batchStats.completed,
@@ -239,7 +236,7 @@ export class EmailQueueService {
   async retryFailedJobs(queueName: string): Promise<number> {
     const queue = this.getQueue(queueName);
     const failed = await queue.getFailed();
-    
+
     let retryCount = 0;
     for (const job of failed) {
       try {
@@ -267,7 +264,7 @@ export class EmailQueueService {
    */
   async removeJob(queueName: string, jobId: string): Promise<boolean> {
     const queue = this.getQueue(queueName);
-    
+
     try {
       const job = await queue.getJob(jobId);
       if (job) {
@@ -289,7 +286,7 @@ export class EmailQueueService {
     // This would integrate with EmailService
     // For now, simulate processing
     await this.delay(Math.random() * 1000 + 500); // 500-1500ms
-    
+
     return {
       success: true,
       emailId: this.generateEmailId(),
@@ -312,7 +309,7 @@ export class EmailQueueService {
         // Process each email with rate limiting
         const result = await this.processSingleEmail({ type: 'single', data: email });
         results.push(result);
-        
+
         if (result.success) {
           successCount++;
         } else {
@@ -350,7 +347,7 @@ export class EmailQueueService {
       // Reschedule if still in future
       const delay = jobData.scheduledFor.getTime() - Date.now();
       await this.add('default', jobData.data, { delay });
-      
+
       return {
         success: true,
         rescheduled: true,
@@ -365,7 +362,7 @@ export class EmailQueueService {
   /**
    * Get queue by name
    */
-  private getQueue(queueName: string): Queue {
+  private getQueue(queueName: string): Bull.Queue {
     switch (queueName) {
       case 'priority':
         return this.priorityQueue;
@@ -388,7 +385,7 @@ export class EmailQueueService {
     };
 
     // Default email queue
-    this.emailQueue = new Queue('email', {
+    this.emailQueue = new Bull('email', {
       redis: redisConfig,
       defaultJobOptions: {
         removeOnComplete: 100,
@@ -397,7 +394,7 @@ export class EmailQueueService {
     });
 
     // High priority queue
-    this.priorityQueue = new Queue('email-priority', {
+    this.priorityQueue = new Bull('email-priority', {
       redis: redisConfig,
       defaultJobOptions: {
         removeOnComplete: 100,
@@ -406,7 +403,7 @@ export class EmailQueueService {
     });
 
     // Batch email queue
-    this.batchQueue = new Queue('email-batch', {
+    this.batchQueue = new Bull('email-batch', {
       redis: redisConfig,
       defaultJobOptions: {
         removeOnComplete: 100,
@@ -444,7 +441,7 @@ export class EmailQueueService {
       });
     });
 
-    this.emailQueue.on('stalled', (job) => {
+    this.emailQueue.on('stalled', job => {
       this.logger.warn(`Email job stalled`, {
         jobId: job.id,
         data: job.data,
@@ -508,12 +505,8 @@ export class EmailQueueService {
    */
   async onModuleDestroy(): Promise<void> {
     this.logger.log('Closing email queues...');
-    
-    await Promise.all([
-      this.emailQueue.close(),
-      this.priorityQueue.close(),
-      this.batchQueue.close(),
-    ]);
+
+    await Promise.all([this.emailQueue.close(), this.priorityQueue.close(), this.batchQueue.close()]);
 
     this.logger.log('Email queues closed successfully');
   }

@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotFoundException, UserNotFoundException, InvalidInputException, BusinessRuleViolationException } from '../common/errors/custom.exceptions';
+import {
+  NotFoundException,
+  UserNotFoundException,
+  InvalidInputException,
+  BusinessRuleViolationException,
+} from '../common/errors/custom.exceptions';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { CreatePropertyDto, PropertyStatus as DTOPropertyStatus } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -13,7 +18,7 @@ export class PropertiesService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   async create(createPropertyDto: CreatePropertyDto, ownerId: string) {
     try {
@@ -101,33 +106,53 @@ export class PropertiesService {
 
     if (city || country) {
       const locationParts: string[] = [];
-      if (city) locationParts.push(city);
-      if (country) locationParts.push(country);
+      if (city) {
+        locationParts.push(city);
+      }
+      if (country) {
+        locationParts.push(country);
+      }
       where.location = { contains: locationParts.join(', '), mode: 'insensitive' };
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       where.price = {};
-      if (minPrice !== undefined) where.price.gte = minPrice;
-      if (maxPrice !== undefined) where.price.lte = maxPrice;
+      if (minPrice !== undefined) {
+        where.price.gte = minPrice;
+      }
+      if (maxPrice !== undefined) {
+        where.price.lte = maxPrice;
+      }
     }
 
     if (minBedrooms !== undefined || maxBedrooms !== undefined) {
       where.bedrooms = {};
-      if (minBedrooms !== undefined) where.bedrooms.gte = minBedrooms;
-      if (maxBedrooms !== undefined) where.bedrooms.lte = maxBedrooms;
+      if (minBedrooms !== undefined) {
+        where.bedrooms.gte = minBedrooms;
+      }
+      if (maxBedrooms !== undefined) {
+        where.bedrooms.lte = maxBedrooms;
+      }
     }
 
     if (minBathrooms !== undefined || maxBathrooms !== undefined) {
       where.bathrooms = {};
-      if (minBathrooms !== undefined) where.bathrooms.gte = minBathrooms;
-      if (maxBathrooms !== undefined) where.bathrooms.lte = maxBathrooms;
+      if (minBathrooms !== undefined) {
+        where.bathrooms.gte = minBathrooms;
+      }
+      if (maxBathrooms !== undefined) {
+        where.bathrooms.lte = maxBathrooms;
+      }
     }
 
     if (minArea !== undefined || maxArea !== undefined) {
       where.squareFootage = {};
-      if (minArea !== undefined) where.squareFootage.gte = minArea;
-      if (maxArea !== undefined) where.squareFootage.lte = maxArea;
+      if (minArea !== undefined) {
+        where.squareFootage.gte = minArea;
+      }
+      if (maxArea !== undefined) {
+        where.squareFootage.lte = maxArea;
+      }
     }
 
     if (ownerId) {
@@ -198,15 +223,33 @@ export class PropertiesService {
 
       const updateData: any = {};
 
-      if (updatePropertyDto.title !== undefined) updateData.title = updatePropertyDto.title;
-      if (updatePropertyDto.description !== undefined) updateData.description = updatePropertyDto.description;
-      if (updatePropertyDto.price !== undefined) updateData.price = updatePropertyDto.price;
-      if (updatePropertyDto.address) updateData.location = this.formatAddress(updatePropertyDto.address);
-      if (updatePropertyDto.status !== undefined) updateData.status = this.mapPropertyStatus(updatePropertyDto.status);
-      if (updatePropertyDto.bedrooms !== undefined) updateData.bedrooms = updatePropertyDto.bedrooms;
-      if (updatePropertyDto.bathrooms !== undefined) updateData.bathrooms = updatePropertyDto.bathrooms;
-      if (updatePropertyDto.areaSqFt !== undefined) updateData.squareFootage = updatePropertyDto.areaSqFt;
-      if (updatePropertyDto.type !== undefined) updateData.propertyType = updatePropertyDto.type;
+      if (updatePropertyDto.title !== undefined) {
+        updateData.title = updatePropertyDto.title;
+      }
+      if (updatePropertyDto.description !== undefined) {
+        updateData.description = updatePropertyDto.description;
+      }
+      if (updatePropertyDto.price !== undefined) {
+        updateData.price = updatePropertyDto.price;
+      }
+      if (updatePropertyDto.address) {
+        updateData.location = this.formatAddress(updatePropertyDto.address);
+      }
+      if (updatePropertyDto.status !== undefined) {
+        updateData.status = this.mapPropertyStatus(updatePropertyDto.status);
+      }
+      if (updatePropertyDto.bedrooms !== undefined) {
+        updateData.bedrooms = updatePropertyDto.bedrooms;
+      }
+      if (updatePropertyDto.bathrooms !== undefined) {
+        updateData.bathrooms = updatePropertyDto.bathrooms;
+      }
+      if (updatePropertyDto.areaSqFt !== undefined) {
+        updateData.squareFootage = updatePropertyDto.areaSqFt;
+      }
+      if (updatePropertyDto.type !== undefined) {
+        updateData.propertyType = updatePropertyDto.type;
+      }
 
       const property = await (this.prisma as any).property.update({
         where: { id },
@@ -264,27 +307,47 @@ export class PropertiesService {
         ];
       }
 
-      if (query?.type) where.propertyType = query.type;
-      if (query?.status) where.status = this.mapPropertyStatus(query.status);
+      if (query?.type) {
+        where.propertyType = query.type;
+      }
+      if (query?.status) {
+        where.status = this.mapPropertyStatus(query.status);
+      }
       if (query?.minPrice !== undefined || query?.maxPrice !== undefined) {
         where.price = {};
-        if (query.minPrice !== undefined) where.price.gte = query.minPrice;
-        if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
+        if (query.minPrice !== undefined) {
+          where.price.gte = query.minPrice;
+        }
+        if (query.maxPrice !== undefined) {
+          where.price.lte = query.maxPrice;
+        }
       }
       if (query?.minBedrooms !== undefined || query?.maxBedrooms !== undefined) {
         where.bedrooms = {};
-        if (query.minBedrooms !== undefined) where.bedrooms.gte = query.minBedrooms;
-        if (query.maxBedrooms !== undefined) where.bedrooms.lte = query.maxBedrooms;
+        if (query.minBedrooms !== undefined) {
+          where.bedrooms.gte = query.minBedrooms;
+        }
+        if (query.maxBedrooms !== undefined) {
+          where.bedrooms.lte = query.maxBedrooms;
+        }
       }
       if (query?.minBathrooms !== undefined || query?.maxBathrooms !== undefined) {
         where.bathrooms = {};
-        if (query.minBathrooms !== undefined) where.bathrooms.gte = query.minBathrooms;
-        if (query.maxBathrooms !== undefined) where.bathrooms.lte = query.maxBathrooms;
+        if (query.minBathrooms !== undefined) {
+          where.bathrooms.gte = query.minBathrooms;
+        }
+        if (query.maxBathrooms !== undefined) {
+          where.bathrooms.lte = query.maxBathrooms;
+        }
       }
       if (query?.minArea !== undefined || query?.maxArea !== undefined) {
         where.squareFootage = {};
-        if (query.minArea !== undefined) where.squareFootage.gte = query.minArea;
-        if (query.maxArea !== undefined) where.squareFootage.lte = query.maxArea;
+        if (query.minArea !== undefined) {
+          where.squareFootage.gte = query.minArea;
+        }
+        if (query.maxArea !== undefined) {
+          where.squareFootage.lte = query.maxArea;
+        }
       }
 
       const properties = await (this.prisma as any).property.findMany({
@@ -326,7 +389,9 @@ export class PropertiesService {
         },
       });
 
-      this.logger.log(`Property status updated: ${id} from ${currentStatus} to ${targetStatus}${userId ? ` by user ${userId}` : ''}`);
+      this.logger.log(
+        `Property status updated: ${id} from ${currentStatus} to ${targetStatus}${userId ? ` by user ${userId}` : ''}`,
+      );
 
       return updatedProperty;
     } catch (error) {
@@ -349,7 +414,12 @@ export class PropertiesService {
     }
   }
 
-  async getStatistics(): Promise<{ total: number; byStatus: Record<string, number>; byType: Record<string, number>; averagePrice: number; }> {
+  async getStatistics(): Promise<{
+    total: number;
+    byStatus: Record<string, number>;
+    byType: Record<string, number>;
+    averagePrice: number;
+  }> {
     try {
       const [total, avgPrice] = await Promise.all([
         (this.prisma as any).property.count(),
@@ -367,15 +437,21 @@ export class PropertiesService {
         _count: { id: true },
       });
 
-      const byStatus = (statusResult || []).reduce((acc: Record<string, number>, item: { status: string; _count: number }) => {
-        acc[item.status] = item._count;
-        return acc;
-      }, {} as Record<string, number>);
+      const byStatus = (statusResult || []).reduce(
+        (acc: Record<string, number>, item: { status: string; _count: number }) => {
+          acc[item.status] = item._count;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
 
-      const byType = (typeResult || []).reduce((acc: Record<string, number>, item: { propertyType: string; _count: number }) => {
-        acc[item.propertyType] = item._count;
-        return acc;
-      }, {} as Record<string, number>);
+      const byType = (typeResult || []).reduce(
+        (acc: Record<string, number>, item: { propertyType: string; _count: number }) => {
+          acc[item.propertyType] = item._count;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
 
       return { total, byStatus, byType, averagePrice: Number(avgPrice._avg.price || 0) };
     } catch (error) {

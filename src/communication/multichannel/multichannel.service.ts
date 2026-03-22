@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Multi-channel Communication Service
- * 
+ *
  * Handles SMS, push notifications, and other communication channels
  */
 @Injectable()
@@ -53,7 +53,7 @@ export class MultichannelService {
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        
+
         results.push({
           channel,
           success: false,
@@ -160,10 +160,7 @@ export class MultichannelService {
   /**
    * Send in-app notification
    */
-  async sendInAppNotification(
-    userId: string,
-    notification: InAppNotification,
-  ): Promise<InAppResult> {
+  async sendInAppNotification(userId: string, notification: InAppNotification): Promise<InAppResult> {
     const provider = this.getProvider('inapp');
     if (!provider) {
       throw new Error('In-app notification provider not configured');
@@ -202,11 +199,7 @@ export class MultichannelService {
   /**
    * Send webhook notification
    */
-  async sendWebhook(
-    url: string,
-    payload: any,
-    options?: WebhookOptions,
-  ): Promise<WebhookResult> {
+  async sendWebhook(url: string, payload: any, options?: WebhookOptions): Promise<WebhookResult> {
     const provider = this.getProvider('webhook');
     if (!provider) {
       throw new Error('Webhook provider not configured');
@@ -267,10 +260,7 @@ export class MultichannelService {
   /**
    * Get channel statistics
    */
-  async getChannelStatistics(
-    channel: CommunicationChannel,
-    timeRange?: TimeRange,
-  ): Promise<ChannelStatistics> {
+  async getChannelStatistics(channel: CommunicationChannel, timeRange?: TimeRange): Promise<ChannelStatistics> {
     const provider = this.getProvider(channel);
     if (!provider || !provider.getStatistics) {
       return {
@@ -373,7 +363,7 @@ export class MultichannelService {
     // Twilio implementation would go here
     // For now, simulate
     await this.delay(1000);
-    
+
     return {
       success: true,
       provider: 'twilio',
@@ -390,7 +380,7 @@ export class MultichannelService {
     // Firebase implementation would go here
     // For now, simulate
     await this.delay(500);
-    
+
     return {
       success: true,
       provider: 'firebase',
@@ -406,7 +396,7 @@ export class MultichannelService {
     // Database implementation would go here
     // For now, simulate
     await this.delay(100);
-    
+
     return {
       success: true,
       provider: 'database',
@@ -421,7 +411,7 @@ export class MultichannelService {
     // HTTP request implementation would go here
     // For now, simulate
     await this.delay(2000);
-    
+
     return {
       success: true,
       provider: 'http',
@@ -437,7 +427,7 @@ export class MultichannelService {
   private async testTwilioConnection(): Promise<any> {
     const startTime = Date.now();
     await this.delay(500);
-    
+
     return {
       provider: 'twilio',
       responseTime: Date.now() - startTime,
@@ -451,7 +441,7 @@ export class MultichannelService {
   private async testFirebaseConnection(): Promise<any> {
     const startTime = Date.now();
     await this.delay(300);
-    
+
     return {
       provider: 'firebase',
       responseTime: Date.now() - startTime,
@@ -465,7 +455,7 @@ export class MultichannelService {
   private async testInAppConnection(): Promise<any> {
     const startTime = Date.now();
     await this.delay(50);
-    
+
     return {
       provider: 'database',
       responseTime: Date.now() - startTime,
@@ -479,7 +469,7 @@ export class MultichannelService {
   private async testWebhookConnection(): Promise<any> {
     const startTime = Date.now();
     await this.delay(1000);
-    
+
     return {
       provider: 'http',
       responseTime: Date.now() - startTime,
@@ -741,7 +731,7 @@ interface ChannelPreferences {
   enabled: boolean;
   quietHours?: {
     start: string; // HH:MM
-    end: string;   // HH:MM
+    end: string; // HH:MM
   };
   frequency?: 'immediate' | 'hourly' | 'daily' | 'weekly';
   maxPerDay?: number;

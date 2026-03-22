@@ -35,10 +35,7 @@ export class DatabaseBackupService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    this.backupDir = path.join(
-      process.cwd(),
-      this.configService.get('BACKUP_DIR') || 'backups/database',
-    );
+    this.backupDir = path.join(process.cwd(), this.configService.get('BACKUP_DIR') || 'backups/database');
     this.initializeBackupDirectory();
     this.loadBackupMetadata();
   }
@@ -71,7 +68,7 @@ export class DatabaseBackupService {
       const metadataDir = path.join(this.backupDir, 'metadata');
       if (fsSync.existsSync(metadataDir)) {
         const files = fsSync.readdirSync(metadataDir);
-        files.forEach((file) => {
+        files.forEach(file => {
           const content = fsSync.readFileSync(path.join(metadataDir, file), 'utf-8');
           const metadata: BackupMetadata = JSON.parse(content);
           this.backupMetadata.set(metadata.id, metadata);
@@ -189,9 +186,12 @@ export class DatabaseBackupService {
       await fs.mkdir(path.dirname(backupPath), { recursive: true });
 
       // Execute incremental backup command
-      await execAsync(`
+      await execAsync(
+        `
         pg_basebackup -D ${backupPath} -Ft -z -P -l "incremental_${backupId}"
-      `, { env: { ...process.env, PGPASSWORD: this.extractPassword(databaseUrl) } });
+      `,
+        { env: { ...process.env, PGPASSWORD: this.extractPassword(databaseUrl) } },
+      );
 
       const stats = await fs.stat(backupPath);
       metadata.size = stats.size;
@@ -226,10 +226,9 @@ export class DatabaseBackupService {
     const env = { ...process.env, PGPASSWORD: password };
 
     // Custom format dump (most reliable for restore)
-    await execAsync(
-      `pg_dump -h ${host} -p ${port} -U ${user} -d ${database} -F c -b -v -f ${backupPath}.dump`,
-      { env },
-    );
+    await execAsync(`pg_dump -h ${host} -p ${port} -U ${user} -d ${database} -F c -b -v -f ${backupPath}.dump`, {
+      env,
+    });
 
     // Schema only (for documentation)
     await execAsync(
@@ -238,10 +237,9 @@ export class DatabaseBackupService {
     );
 
     // Data only (for reference)
-    await execAsync(
-      `pg_dump -h ${host} -p ${port} -U ${user} -d ${database} --data-only -f ${backupPath}_data.sql`,
-      { env },
-    );
+    await execAsync(`pg_dump -h ${host} -p ${port} -U ${user} -d ${database} --data-only -f ${backupPath}_data.sql`, {
+      env,
+    });
   }
 
   /**
@@ -263,7 +261,7 @@ export class DatabaseBackupService {
       const hash = crypto.createHash('sha256');
       const stream = fsSync.createReadStream(filePath);
 
-      stream.on('data', (chunk) => hash.update(chunk));
+      stream.on('data', chunk => hash.update(chunk));
       stream.on('end', () => resolve(hash.digest('hex')));
       stream.on('error', reject);
     });
@@ -380,11 +378,11 @@ export class DatabaseBackupService {
     let backups = Array.from(this.backupMetadata.values());
 
     if (filters?.type) {
-      backups = backups.filter((b) => b.type === filters.type);
+      backups = backups.filter(b => b.type === filters.type);
     }
 
     if (filters?.status) {
-      backups = backups.filter((b) => b.status === filters.status);
+      backups = backups.filter(b => b.status === filters.status);
     }
 
     backups.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -401,7 +399,7 @@ export class DatabaseBackupService {
   async getPointInTimeRecovery(targetTimestamp: Date): Promise<PointInTimeRecovery> {
     // Find the most recent backup before target timestamp
     const backups = Array.from(this.backupMetadata.values())
-      .filter((b) => b.timestamp <= targetTimestamp && b.status === BackupStatus.VERIFIED)
+      .filter(b => b.timestamp <= targetTimestamp && b.status === BackupStatus.VERIFIED)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
     if (backups.length === 0) {
@@ -432,7 +430,7 @@ export class DatabaseBackupService {
     }
 
     const files = fsSync.readdirSync(logsDir);
-    return files.filter((f) => {
+    return files.filter(f => {
       const stats = fsSync.statSync(path.join(logsDir, f));
       return stats.mtime >= start && stats.mtime <= end;
     });
@@ -451,8 +449,7 @@ export class DatabaseBackupService {
    * Parse database URL
    */
   private parseDatabaseUrl(url: string) {
-    const regex =
-      /postgresql:\/\/(.*?):(.*?)@(.*?):(\d+)\/(.*?)(\?|$)/;
+    const regex = /postgresql:\/\/(.*?):(.*?)@(.*?):(\d+)\/(.*?)(\?|$)/;
     const match = url.match(regex);
 
     if (!match) {
@@ -486,13 +483,13 @@ export class DatabaseBackupService {
       totalBackups: backups.length,
       totalSize: backups.reduce((sum, b) => sum + b.size, 0),
       byType: {
-        full: backups.filter((b) => b.type === BackupType.FULL).length,
-        incremental: backups.filter((b) => b.type === BackupType.INCREMENTAL).length,
+        full: backups.filter(b => b.type === BackupType.FULL).length,
+        incremental: backups.filter(b => b.type === BackupType.INCREMENTAL).length,
       },
       byStatus: {
-        completed: backups.filter((b) => b.status === BackupStatus.COMPLETED).length,
-        verified: backups.filter((b) => b.status === BackupStatus.VERIFIED).length,
-        failed: backups.filter((b) => b.status === BackupStatus.FAILED).length,
+        completed: backups.filter(b => b.status === BackupStatus.COMPLETED).length,
+        verified: backups.filter(b => b.status === BackupStatus.VERIFIED).length,
+        failed: backups.filter(b => b.status === BackupStatus.FAILED).length,
       },
       averageDuration: Math.round(backups.reduce((sum, b) => sum + b.duration, 0) / backups.length),
     };

@@ -14,11 +14,7 @@ import { BackupRecoveryController } from './backup-recovery.controller';
  * Comprehensive backup and disaster recovery system
  */
 @Module({
-  imports: [
-    ScheduleModule.forRoot(),
-    ConfigModule,
-    DatabaseModule,
-  ],
+  imports: [ScheduleModule.forRoot(), ConfigModule, DatabaseModule],
   controllers: [BackupRecoveryController],
   providers: [
     DatabaseBackupService,

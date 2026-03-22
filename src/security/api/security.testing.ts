@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Security Testing Service
- * 
+ *
  * Provides automated security testing and vulnerability scanning
  */
 @Injectable()
@@ -330,13 +330,7 @@ export class SecurityTestingService {
     const result: TestResult = { passed: true, vulnerabilities: [] };
 
     // Test password requirements
-    const weakPasswords = [
-      'password',
-      '123456',
-      'admin',
-      'qwerty',
-      'password123',
-    ];
+    const weakPasswords = ['password', '123456', 'admin', 'qwerty', 'password123'];
 
     for (const password of weakPasswords) {
       // This would test actual password validation logic
@@ -365,7 +359,7 @@ export class SecurityTestingService {
       // This would test actual RBAC logic
       // For now, simulate the test
       const unauthorizedAccess = await this.simulateUnauthorizedAccess();
-      
+
       if (unauthorizedAccess) {
         result.vulnerabilities.push({
           type: 'UNAUTHORIZED_ACCESS',
@@ -396,7 +390,7 @@ export class SecurityTestingService {
 
     // Test privilege escalation attempts
     const escalationAttempts = await this.simulatePrivilegeEscalation();
-    
+
     if (escalationAttempts.success) {
       result.vulnerabilities.push({
         type: 'PRIVILEGE_ESCALATION',
@@ -477,7 +471,7 @@ export class SecurityTestingService {
     // This would test actual rate limiting
     // For now, simulate the test
     const rateLimitBreach = await this.simulateRateLimitBreach();
-    
+
     if (!rateLimitBreach.blocked) {
       result.vulnerabilities.push({
         type: 'RATE_LIMIT_NOT_ENFORCED',
@@ -498,7 +492,7 @@ export class SecurityTestingService {
     const result: TestResult = { passed: true, vulnerabilities: [] };
 
     const burstAttack = await this.simulateBurstAttack();
-    
+
     if (!burstAttack.blocked) {
       result.vulnerabilities.push({
         type: 'BURST_PROTECTION_MISSING',
@@ -578,7 +572,7 @@ export class SecurityTestingService {
 
     // This would test actual CSRF protection
     const csrfBreach = await this.simulateCsrfAttack();
-    
+
     if (csrfBreach.success) {
       result.vulnerabilities.push({
         type: 'CSRF_PROTECTION_MISSING',
@@ -608,7 +602,7 @@ export class SecurityTestingService {
 
     // This would test actual security headers
     const missingHeaders = await this.checkMissingHeaders(requiredHeaders);
-    
+
     for (const header of missingHeaders) {
       result.vulnerabilities.push({
         type: 'MISSING_SECURITY_HEADER',
@@ -715,7 +709,9 @@ export class SecurityTestingService {
    * Calculate test score
    */
   private calculateTestScore(vulnerabilities: SecurityVulnerability[]): number {
-    if (vulnerabilities.length === 0) return 100;
+    if (vulnerabilities.length === 0) {
+      return 100;
+    }
 
     let score = 100;
     for (const vuln of vulnerabilities) {
@@ -742,7 +738,9 @@ export class SecurityTestingService {
    * Calculate overall security score
    */
   private calculateSecurityScore(tests: SecurityTest[]): number {
-    if (tests.length === 0) return 0;
+    if (tests.length === 0) {
+      return 0;
+    }
 
     const totalScore = tests.reduce((sum, test) => sum + test.score, 0);
     return Math.round(totalScore / tests.length);

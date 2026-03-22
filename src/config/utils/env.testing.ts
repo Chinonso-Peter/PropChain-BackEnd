@@ -47,7 +47,7 @@ export class EnvTesting {
       },
       {
         name: 'Valid private key',
-        env: { PRIVATE_KEY: '0x' + 'a'.repeat(64) },
+        env: { PRIVATE_KEY: `0x${'a'.repeat(64)}` },
         shouldPass: true,
       },
       {
@@ -71,25 +71,25 @@ export class EnvTesting {
       try {
         // Mock the validation logic (simplified for testing)
         const isValid = this.validateTestCase(testCase.env);
-        
+
         if (isValid === testCase.shouldPass) {
           passed++;
           results.push({ name: testCase.name, status: 'PASS' });
         } else {
           failed++;
-          results.push({ 
-            name: testCase.name, 
-            status: 'FAIL', 
+          results.push({
+            name: testCase.name,
+            status: 'FAIL',
             expected: testCase.shouldPass ? 'PASS' : 'FAIL',
-            actual: isValid ? 'PASS' : 'FAIL'
+            actual: isValid ? 'PASS' : 'FAIL',
           });
         }
       } catch (error) {
         failed++;
-        results.push({ 
-          name: testCase.name, 
-          status: 'FAIL', 
-          error: error instanceof Error ? error.message : String(error)
+        results.push({
+          name: testCase.name,
+          status: 'FAIL',
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -150,7 +150,7 @@ export class EnvTesting {
    */
   static generateTestReport(): string {
     const testResults = this.testValidation();
-    
+
     let report = '# Environment Variable Validation Test Report\n\n';
     report += `**Total Tests:** ${testResults.passed + testResults.failed}\n`;
     report += `**Passed:** ${testResults.passed}\n`;
@@ -174,10 +174,10 @@ export class EnvTesting {
    */
   static runTestsAndSaveReport(outputPath: string = './test-reports/env-validation.md'): void {
     const report = this.generateTestReport();
-    
+
     // Ensure directory exists
     const dir = path.dirname(outputPath);
-    
+
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }

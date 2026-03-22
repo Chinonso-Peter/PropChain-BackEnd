@@ -341,8 +341,7 @@ export class UserService {
       where: {
         OR: [
           { email: { contains: query, mode: 'insensitive' } },
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
+          { bio: { contains: query, mode: 'insensitive' } },
           { location: { contains: query, mode: 'insensitive' } },
         ],
       },

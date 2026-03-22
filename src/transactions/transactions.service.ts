@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/database';
+import { BlockchainService } from '../blockchain/blockchain.service';
 import { TransactionStatus } from 'src/models/transaction.entity';
+import { CreateTransactionDto, DisputeDto, PaginationParams } from './dto/create-transaction.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -29,10 +31,7 @@ export class TransactionsService {
     };
 
     if (!allowedTransitions[current]?.includes(next)) {
-      throw new BusinessException(
-        ERROR_CODES.INVALID_TRANSACTION_STATE,
-        `Invalid transition from ${current} to ${next}`,
-      );
+      throw new Error(`Invalid transition from ${current} to ${next}`);
     }
   }
   async createTransaction(dto: CreateTransactionDto) {
@@ -82,5 +81,22 @@ export class TransactionsService {
         },
       });
     }
+  }
+
+  async getTransaction(id: string) {
+    return this.prisma.transaction.findUnique({ where: { id } });
+  }
+
+  async findAll(query: PaginationParams) {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    return this.prisma.transaction.findMany({ skip: (page - 1) * limit, take: limit });
+  }
+
+  async raiseDispute(id: string, dto: DisputeDto) {
+    return this.prisma.transaction.update({
+      where: { id },
+      data: { status: 'DISPUTED' },
+    });
   }
 }

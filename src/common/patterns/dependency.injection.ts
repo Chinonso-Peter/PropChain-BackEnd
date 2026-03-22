@@ -1,6 +1,6 @@
 /**
  * Standard dependency injection patterns for PropChain Backend
- * 
+ *
  * This file defines the standardized dependency injection patterns that all modules should follow
  * to ensure consistency and proper dependency management.
  */
@@ -91,7 +91,8 @@ export const SERVICE_INJECTION_PATTERNS = {
     description: 'Basic service dependencies',
   },
   CONFIGURED: {
-    template: 'constructor(private readonly serviceName: ServiceName, private readonly configService: ConfigService) {}',
+    template:
+      'constructor(private readonly serviceName: ServiceName, private readonly configService: ConfigService) {}',
     example: `constructor(
   private readonly blockchainService: BlockchainService,
   private readonly configService: ConfigService,
@@ -143,25 +144,27 @@ export class DIUtils {
   /**
    * Generate constructor injection code
    */
-  static generateConstructorInjection(dependencies: Array<{
-    name: string;
-    type: string;
-    isOptional?: boolean;
-    token?: string;
-  }>): string {
+  static generateConstructorInjection(
+    dependencies: Array<{
+      name: string;
+      type: string;
+      isOptional?: boolean;
+      token?: string;
+    }>,
+  ): string {
     const injections = dependencies.map(dep => {
       let injection = '';
-      
+
       if (dep.isOptional) {
         injection += '@InjectOptional() ';
       }
-      
+
       if (dep.token) {
         injection += `@Inject(${dep.token}) `;
       }
-      
+
       injection += `private readonly ${dep.name}: ${dep.type}`;
-      
+
       return injection;
     });
 
@@ -171,20 +174,22 @@ export class DIUtils {
   /**
    * Generate property injection code
    */
-  static generatePropertyInjection(dependencies: Array<{
-    name: string;
-    type: string;
-    token?: string;
-  }>): string[] {
+  static generatePropertyInjection(
+    dependencies: Array<{
+      name: string;
+      type: string;
+      token?: string;
+    }>,
+  ): string[] {
     return dependencies.map(dep => {
       let injection = '';
-      
+
       if (dep.token) {
         injection += `@Inject(${dep.token}) `;
       }
-      
+
       injection += `private readonly ${dep.name}: ${dep.type};`;
-      
+
       return injection;
     });
   }
@@ -199,7 +204,7 @@ export class DIUtils {
   } {
     const errors: string[] = [];
     const warnings: string[] = [];
-    
+
     // Check for proper constructor injection
     if (content.includes('constructor(')) {
       // Check for readonly properties
@@ -209,14 +214,14 @@ export class DIUtils {
         if (!params.includes('readonly')) {
           warnings.push('Constructor parameters should be readonly');
         }
-        
+
         // Check for private properties
-        if (!params.includes('private')) && !params.includes('protected')) {
+        if (!params.includes('private') && !params.includes('protected')) {
           warnings.push('Constructor parameters should be private or protected');
         }
       }
     }
-    
+
     // Check for @Inject without @InjectOptional for optional dependencies
     const injectMatches = content.match(/@Inject\([^)]+\)/g);
     if (injectMatches) {
@@ -230,7 +235,7 @@ export class DIUtils {
         }
       }
     }
-    
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -247,7 +252,7 @@ export class DIUtils {
     FACTORY_TOKEN: string;
   } {
     const upperName = serviceName.toUpperCase();
-    
+
     return {
       SERVICE_TOKEN: `${upperName}_SERVICE_TOKEN`,
       REPOSITORY_TOKEN: `${upperName}_REPOSITORY_TOKEN`,
@@ -261,7 +266,7 @@ export class DIUtils {
   static generateProviders(serviceName: string): string[] {
     const tokens = this.generateTokens(serviceName);
     const lowerName = serviceName.toLowerCase();
-    
+
     return [
       `{
         provide: ${tokens.SERVICE_TOKEN},
@@ -281,7 +286,7 @@ export class DIUtils {
    */
   static generateModuleProviders(serviceName: string): string {
     const providers = this.generateProviders(serviceName);
-    
+
     return `providers: [
   ${providers.join(',\n  ')},
 ]`;
@@ -292,7 +297,7 @@ export class DIUtils {
    */
   static generateModuleExports(serviceName: string): string {
     const tokens = this.generateTokens(serviceName);
-    
+
     return `exports: [
   ${serviceName}Service,
   ${serviceName}Repository,
@@ -336,13 +341,13 @@ private readonly ${dependencyName.toLowerCase()}: ${dependencyType}`;
    */
   static suggestSolutions(circularPaths: string[]): string[] {
     const solutions: string[] = [];
-    
+
     for (const path of circularPaths) {
       solutions.push(`Consider using forwardRef() for: ${path}`);
       solutions.push(`Extract common dependencies to a shared module`);
       solutions.push(`Use interfaces to break the circular dependency`);
     }
-    
+
     return solutions;
   }
 }
@@ -355,10 +360,8 @@ export class TestDIUtils {
    * Generate test module configuration
    */
   static generateTestModule(serviceName: string, dependencies: string[]): string {
-    const mockProviders = dependencies.map(dep => 
-      `{ provide: ${dep}, useClass: Mock${dep} }`
-    );
-    
+    const mockProviders = dependencies.map(dep => `{ provide: ${dep}, useClass: Mock${dep} }`);
+
     return `Test.createTestingModule({
   providers: [
     ${serviceName}Service,
@@ -371,10 +374,8 @@ export class TestDIUtils {
    * Generate mock service
    */
   static generateMockService(serviceName: string, methods: string[]): string {
-    const methodMocks = methods.map(method => 
-      `${method}: jest.fn(),`
-    );
-    
+    const methodMocks = methods.map(method => `${method}: jest.fn(),`);
+
     return `export class Mock${serviceName} {
   ${methodMocks.join('\n  ')}
 }`;
@@ -384,14 +385,10 @@ export class TestDIUtils {
    * Generate unit test setup
    */
   static generateUnitTestSetup(serviceName: string, dependencies: string[]): string {
-    const mockDeclarations = dependencies.map(dep => 
-      `let mock${dep}: Mock${dep};`
-    ).join('\n  ');
-    
-    const mockInstantiations = dependencies.map(dep => 
-      `mock${dep} = new Mock${dep}();`
-    ).join('\n    ');
-    
+    const mockDeclarations = dependencies.map(dep => `let mock${dep}: Mock${dep};`).join('\n  ');
+
+    const mockInstantiations = dependencies.map(dep => `mock${dep} = new Mock${dep}();`).join('\n    ');
+
     return `describe('${serviceName}Service', () => {
   let service: ${serviceName}Service;
   ${mockDeclarations}

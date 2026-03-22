@@ -14,6 +14,16 @@ export class Transaction implements PrismaTransaction {
   propertyId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  buyerId: string;
+  sellerId: string;
+  currency: string;
+  blockchainHash: string | null;
+  blockNumber: number | null;
+  confirmations: number;
+  escrowWallet: string | null;
+  gasFee: Decimal | null;
+  platformFee: Decimal | null;
+  disputeReason: string | null;
 }
 
 export type CreateTransactionInput = {

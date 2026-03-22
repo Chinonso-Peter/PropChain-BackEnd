@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * API Threat Detection Service
- * 
+ *
  * Detects and prevents various API security threats
  */
 @Injectable()
@@ -59,7 +59,9 @@ export class ThreatDetectionService {
    */
   private checkRateLimiting(clientIp: string, analysis: ThreatAnalysis): void {
     const tracker = this.requestTracker.get(clientIp);
-    if (!tracker) return;
+    if (!tracker) {
+      return;
+    }
 
     const now = Date.now();
     const recentRequests = tracker.requests.filter(time => now - time < 60000); // Last minute
@@ -81,13 +83,15 @@ export class ThreatDetectionService {
    */
   private checkBruteForce(clientIp: string, endpoint: string, analysis: ThreatAnalysis): void {
     const tracker = this.requestTracker.get(clientIp);
-    if (!tracker) return;
+    if (!tracker) {
+      return;
+    }
 
     // Check for repeated failed attempts on sensitive endpoints
     const sensitiveEndpoints = ['/auth/login', '/auth/register', '/api/keys'];
     if (sensitiveEndpoints.some(ep => endpoint.includes(ep))) {
       const recentFailures = tracker.failedRequests.filter(time => Date.now() - time < 300000); // Last 5 minutes
-      
+
       if (recentFailures.length > 10) {
         analysis.threats.push({
           type: 'BRUTE_FORCE',
@@ -186,10 +190,10 @@ export class ThreatDetectionService {
    */
   private checkCsrf(request: any, analysis: ThreatAnalysis): void {
     const methods = ['POST', 'PUT', 'DELETE', 'PATCH'];
-    
+
     if (methods.includes(request.method)) {
       const csrfToken = request.headers['x-csrf-token'] || request.body._csrf;
-      
+
       if (!csrfToken && !this.isSafeOrigin(request)) {
         analysis.threats.push({
           type: 'CSRF',
@@ -207,12 +211,12 @@ export class ThreatDetectionService {
    */
   private checkSuspiciousPatterns(request: any, analysis: ThreatAnalysis): void {
     const suspiciousPatterns = [
-      /\.\.\//g,  // Path traversal
-      /\.\.\\/g,  // Path traversal
-      /\/etc\/passwd/gi,  // System file access
-      /\/proc\//gi,  // Process information
-      /<\?php/gi,  // PHP tags
-      /<%/gi,  // ASP tags
+      /\.\.\//g, // Path traversal
+      /\.\.\\/g, // Path traversal
+      /\/etc\/passwd/gi, // System file access
+      /\/proc\//gi, // Process information
+      /<\?php/gi, // PHP tags
+      /<%/gi, // ASP tags
     ];
 
     const checkValue = (value: any, path: string): void => {
@@ -263,7 +267,9 @@ export class ThreatDetectionService {
    */
   private checkAnomalousBehavior(clientIp: string, request: any, analysis: ThreatAnalysis): void {
     const tracker = this.requestTracker.get(clientIp);
-    if (!tracker || tracker.requests.length < 10) return;
+    if (!tracker || tracker.requests.length < 10) {
+      return;
+    }
 
     // Check for unusual request patterns
     const endpoints = new Set(tracker.endpoints);
@@ -299,7 +305,7 @@ export class ThreatDetectionService {
    */
   private updateRequestTracker(clientIp: string, request: any): void {
     const now = Date.now();
-    
+
     if (!this.requestTracker.has(clientIp)) {
       this.requestTracker.set(clientIp, {
         ip: clientIp,
@@ -331,7 +337,7 @@ export class ThreatDetectionService {
     const tracker = this.requestTracker.get(clientIp);
     if (tracker) {
       tracker.failedRequests.push(Date.now());
-      
+
       // Keep only last 100 failed requests
       if (tracker.failedRequests.length > 100) {
         tracker.failedRequests = tracker.failedRequests.slice(-100);
@@ -369,8 +375,7 @@ export class ThreatDetectionService {
    */
   getThreatStatistics(): ThreatStatistics {
     const now = Date.now();
-    const recentThreats = Array.from(this.requestTracker.values())
-      .filter(tracker => now - tracker.lastSeen < 3600000); // Last hour
+    const recentThreats = Array.from(this.requestTracker.values()).filter(tracker => now - tracker.lastSeen < 3600000); // Last hour
 
     const totalRequests = recentThreats.reduce((sum, tracker) => sum + tracker.requests.length, 0);
     const totalFailed = recentThreats.reduce((sum, tracker) => sum + tracker.failedRequests.length, 0);
@@ -391,11 +396,13 @@ export class ThreatDetectionService {
    * Get client IP from request
    */
   private getClientIp(request: any): string {
-    return request.ip ||
-           request.connection.remoteAddress ||
-           request.socket.remoteAddress ||
-           (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-           '0.0.0.0';
+    return (
+      request.ip ||
+      request.connection.remoteAddress ||
+      request.socket.remoteAddress ||
+      (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      '0.0.0.0'
+    );
   }
 
   /**
@@ -404,7 +411,7 @@ export class ThreatDetectionService {
   private isSafeOrigin(request: any): boolean {
     const origin = request.headers.origin || request.headers.referer;
     const allowedOrigins = this.configService.get<string[]>('CORS_ALLOWED_ORIGINS', []);
-    
+
     return !origin || allowedOrigins.includes(origin);
   }
 
@@ -420,16 +427,19 @@ export class ThreatDetectionService {
    * Start cleanup process
    */
   private startCleanup(): void {
-    setInterval(() => {
-      const now = Date.now();
-      const cutoff = now - 24 * 60 * 60 * 1000; // 24 hours ago
+    setInterval(
+      () => {
+        const now = Date.now();
+        const cutoff = now - 24 * 60 * 60 * 1000; // 24 hours ago
 
-      for (const [ip, tracker] of this.requestTracker.entries()) {
-        if (tracker.lastSeen < cutoff) {
-          this.requestTracker.delete(ip);
+        for (const [ip, tracker] of this.requestTracker.entries()) {
+          if (tracker.lastSeen < cutoff) {
+            this.requestTracker.delete(ip);
+          }
         }
-      }
-    }, 60 * 60 * 1000); // Every hour
+      },
+      60 * 60 * 1000,
+    ); // Every hour
   }
 }
 

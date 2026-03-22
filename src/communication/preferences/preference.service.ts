@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Email Preference Service
- * 
+ *
  * Manages user communication preferences and unsubscribe functionality
  */
 @Injectable()
@@ -46,6 +46,7 @@ export class PreferenceService {
       },
       inapp: {
         enabled: true,
+        marketing: false,
         security: true,
         transactional: true,
       },
@@ -60,10 +61,7 @@ export class PreferenceService {
   /**
    * Update user preferences
    */
-  async updateUserPreferences(
-    userId: string,
-    preferences: Partial<UserPreferences>,
-  ): Promise<UserPreferences> {
+  async updateUserPreferences(userId: string, preferences: Partial<UserPreferences>): Promise<UserPreferences> {
     this.logger.log(`Updating user preferences`, {
       userId,
       updatedFields: Object.keys(preferences),
@@ -80,15 +78,12 @@ export class PreferenceService {
   /**
    * Update email preferences
    */
-  async updateEmailPreferences(
-    userId: string,
-    preferences: Partial<EmailPreferences>,
-  ): Promise<EmailPreferences> {
+  async updateEmailPreferences(userId: string, preferences: Partial<EmailPreferences>): Promise<EmailPreferences> {
     const userPrefs = await this.getUserPreferences(userId);
     const updatedEmailPrefs = { ...userPrefs.email, ...preferences };
-    
+
     await this.updateUserPreferences(userId, { email: updatedEmailPrefs });
-    
+
     this.logger.log(`Updated email preferences`, {
       userId,
       preferences: updatedEmailPrefs,
@@ -106,12 +101,12 @@ export class PreferenceService {
     preferences: Partial<ChannelPreferences>,
   ): Promise<ChannelPreferences> {
     const userPrefs = await this.getUserPreferences(userId);
-    
+
     let updatedChannelPrefs: ChannelPreferences;
-    
+
     switch (channel) {
       case 'email':
-        updatedChannelPrefs = { ...userPrefs.email, ...preferences } as EmailPreferences;
+        updatedChannelPrefs = { ...userPrefs.email, ...preferences } as ChannelPreferences;
         break;
       case 'sms':
         updatedChannelPrefs = { ...userPrefs.sms, ...preferences } as ChannelPreferences;
@@ -127,7 +122,7 @@ export class PreferenceService {
     }
 
     await this.updateUserPreferences(userId, { [channel]: updatedChannelPrefs });
-    
+
     this.logger.log(`Updated ${channel} preferences`, {
       userId,
       preferences: updatedChannelPrefs,
@@ -153,7 +148,7 @@ export class PreferenceService {
     });
 
     // Validate unsubscribe token
-    if (token && !await this.validateUnsubscribeToken(userId, token)) {
+    if (token && !(await this.validateUnsubscribeToken(userId, token))) {
       return {
         success: false,
         error: 'Invalid unsubscribe token',
@@ -162,7 +157,7 @@ export class PreferenceService {
 
     try {
       const userPrefs = await this.getUserPreferences(userId);
-      
+
       // Update preferences based on unsubscribe type
       switch (type) {
         case 'all':
@@ -173,7 +168,7 @@ export class PreferenceService {
             push: { ...userPrefs.push, marketing: false },
           });
           break;
-          
+
         case 'marketing':
           // Disable marketing across all channels
           await this.updateUserPreferences(userId, {
@@ -182,17 +177,17 @@ export class PreferenceService {
             push: { ...userPrefs.push, marketing: false },
           });
           break;
-          
+
         case 'newsletter':
           // Disable newsletter specifically
           await this.updateEmailPreferences(userId, { newsletter: false });
           break;
-          
+
         case 'channel':
           // Disable entire channel
           await this.updateChannelPreferences(userId, channel, { enabled: false });
           break;
-          
+
         default:
           throw new Error(`Unknown unsubscribe type: ${type}`);
       }
@@ -212,7 +207,7 @@ export class PreferenceService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       this.logger.error(`Failed to unsubscribe user`, errorMessage, {
         userId,
         channel,
@@ -229,11 +224,7 @@ export class PreferenceService {
   /**
    * Resubscribe user
    */
-  async resubscribe(
-    userId: string,
-    channel: CommunicationChannel,
-    type: ResubscribeType,
-  ): Promise<ResubscribeResult> {
+  async resubscribe(userId: string, channel: CommunicationChannel, type: ResubscribeType): Promise<ResubscribeResult> {
     this.logger.log(`Processing resubscribe request`, {
       userId,
       channel,
@@ -242,7 +233,7 @@ export class PreferenceService {
 
     try {
       const userPrefs = await this.getUserPreferences(userId);
-      
+
       // Update preferences based on resubscribe type
       switch (type) {
         case 'marketing':
@@ -253,17 +244,17 @@ export class PreferenceService {
             push: { ...userPrefs.push, marketing: true },
           });
           break;
-          
+
         case 'newsletter':
           // Enable newsletter specifically
           await this.updateEmailPreferences(userId, { newsletter: true });
           break;
-          
+
         case 'channel':
           // Enable entire channel
           await this.updateChannelPreferences(userId, channel, { enabled: true });
           break;
-          
+
         default:
           throw new Error(`Unknown resubscribe type: ${type}`);
       }
@@ -283,7 +274,7 @@ export class PreferenceService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       this.logger.error(`Failed to resubscribe user`, errorMessage, {
         userId,
         channel,
@@ -302,12 +293,12 @@ export class PreferenceService {
    */
   async generateUnsubscribeToken(userId: string): Promise<string> {
     const token = Buffer.from(`${userId}:${Date.now()}:${this.generateSecret()}`).toString('base64');
-    
+
     // Store token in database with expiry
     // For now, just return token
-    
+
     this.logger.log(`Generated unsubscribe token`, { userId });
-    
+
     return token;
   }
 
@@ -318,18 +309,18 @@ export class PreferenceService {
     try {
       const decoded = Buffer.from(token, 'base64').toString('utf8');
       const [tokenUserId, timestamp] = decoded.split(':');
-      
+
       // Check if token matches user
       if (tokenUserId !== userId) {
         return false;
       }
-      
+
       // Check if token is not expired (24 hours)
       const tokenTime = parseInt(timestamp);
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      
-      return (now - tokenTime) < maxAge;
+
+      return now - tokenTime < maxAge;
     } catch {
       return false;
     }
@@ -342,14 +333,14 @@ export class PreferenceService {
     try {
       const decoded = Buffer.from(token, 'base64').toString('utf8');
       const [userId, timestamp] = decoded.split(':');
-      
+
       // Validate token
-      if (!await this.validateUnsubscribeToken(userId, token)) {
+      if (!(await this.validateUnsubscribeToken(userId, token))) {
         return null;
       }
-      
+
       const userPrefs = await this.getUserPreferences(userId);
-      
+
       return {
         userId,
         token,
@@ -426,7 +417,7 @@ export class PreferenceService {
    */
   async exportUserPreferences(userId: string): Promise<PreferenceExport> {
     const preferences = await this.getUserPreferences(userId);
-    
+
     return {
       userId,
       exportedAt: new Date(),
@@ -439,11 +430,7 @@ export class PreferenceService {
   /**
    * Import user preferences
    */
-  async importUserPreferences(
-    userId: string,
-    preferences: any,
-    signature: string,
-  ): Promise<ImportResult> {
+  async importUserPreferences(userId: string, preferences: any, signature: string): Promise<ImportResult> {
     try {
       // Validate signature
       if (!this.validateExportSignature(preferences, signature)) {
@@ -455,9 +442,9 @@ export class PreferenceService {
 
       // Import preferences
       await this.updateUserPreferences(userId, preferences);
-      
+
       this.logger.log(`Successfully imported preferences`, { userId });
-      
+
       return {
         success: true,
         importedAt: new Date(),
@@ -465,9 +452,9 @@ export class PreferenceService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       this.logger.error(`Failed to import preferences`, errorMessage, { userId });
-      
+
       return {
         success: false,
         error: errorMessage,
@@ -478,10 +465,7 @@ export class PreferenceService {
   /**
    * Merge preferences
    */
-  private mergePreferences(
-    existing: UserPreferences,
-    updates: Partial<UserPreferences>,
-  ): UserPreferences {
+  private mergePreferences(existing: UserPreferences, updates: Partial<UserPreferences>): UserPreferences {
     return {
       userId: updates.userId || existing.userId,
       email: { ...existing.email, ...updates.email },
@@ -539,7 +523,7 @@ export class PreferenceService {
   private generateExportSignature(preferences: any): string {
     const data = JSON.stringify(preferences);
     const secret = this.configService.get<string>('PREFERENCE_EXPORT_SECRET');
-    
+
     // Simple HMAC signature (in production, use crypto)
     return Buffer.from(`${data}:${secret}`).toString('base64');
   }
@@ -551,7 +535,7 @@ export class PreferenceService {
     const data = JSON.stringify(preferences);
     const secret = this.configService.get<string>('PREFERENCE_EXPORT_SECRET');
     const expectedSignature = Buffer.from(`${data}:${secret}`).toString('base64');
-    
+
     return signature === expectedSignature;
   }
 }
@@ -577,7 +561,7 @@ interface EmailPreferences {
   frequency: 'immediate' | 'hourly' | 'daily' | 'weekly';
   quietHours?: {
     start: string; // HH:MM
-    end: string;   // HH:MM
+    end: string; // HH:MM
   };
 }
 

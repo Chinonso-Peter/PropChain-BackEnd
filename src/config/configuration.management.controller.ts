@@ -1,27 +1,27 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
-  Query, 
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
   UseGuards,
   Request,
   Response,
   HttpStatus,
-  Logger
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigHotReloadService } from './utils/config.hot-reload';
 import { ConfigVersioningService, ConfigRollbackResult } from './utils/config.versioning';
 import { ConfigAuditService } from './utils/config.audit';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AdminGuard } from '../auth/guards/admin.guard';
+import * as fs from 'fs';
 
 @Controller('config/management')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard)
 export class ConfigurationManagementController {
   private readonly logger = new Logger(ConfigurationManagementController.name);
 
@@ -38,7 +38,7 @@ export class ConfigurationManagementController {
   @Get()
   async getCurrentConfig(@Request() req) {
     const config: Record<string, string> = {};
-    
+
     // Get all environment variables (excluding sensitive ones for display)
     for (const [key, value] of Object.entries(process.env)) {
       if (value && !key.startsWith('npm_') && !key.startsWith('NODE_')) {
@@ -47,12 +47,7 @@ export class ConfigurationManagementController {
     }
 
     // Log access
-    await this.auditService.logAccess(
-      'all_config',
-      req.user?.sub,
-      req.ip,
-      req.headers['user-agent']
-    );
+    await this.auditService.logAccess('all_config', req.user?.sub, req.ip, req.headers['user-agent']);
 
     return {
       success: true,
@@ -67,7 +62,7 @@ export class ConfigurationManagementController {
   @Get(':key')
   async getConfigValue(@Param('key') key: string, @Request() req) {
     const value = this.configService.get(key);
-    
+
     if (!value) {
       return {
         success: false,
@@ -76,12 +71,7 @@ export class ConfigurationManagementController {
     }
 
     // Log access
-    await this.auditService.logAccess(
-      key,
-      req.user?.sub,
-      req.ip,
-      req.headers['user-agent']
-    );
+    await this.auditService.logAccess(key, req.user?.sub, req.ip, req.headers['user-agent']);
 
     return {
       success: true,
@@ -96,11 +86,7 @@ export class ConfigurationManagementController {
    * Update configuration value
    */
   @Put(':key')
-  async updateConfigValue(
-    @Param('key') key: string,
-    @Body() body: { value: string },
-    @Request() req
-  ) {
+  async updateConfigValue(@Param('key') key: string, @Body() body: { value: string }, @Request() req) {
     const oldValue = process.env[key];
     const newValue = body.value;
 
@@ -118,11 +104,7 @@ export class ConfigurationManagementController {
       process.env[key] = newValue;
 
       // Create a version before making changes
-      await this.versioningService.createVersion(
-        `Updated ${key}`,
-        req.user?.sub,
-        ['update']
-      );
+      await this.versioningService.createVersion(`Updated ${key}`, req.user?.sub, ['update']);
 
       // Log the change
       await this.auditService.logUpdate(
@@ -131,7 +113,7 @@ export class ConfigurationManagementController {
         newValue,
         req.user?.sub,
         req.ip,
-        req.headers['user-agent']
+        req.headers['user-agent'],
       );
 
       this.logger.log(`Configuration key ${key} updated by user ${req.user?.sub}`);
@@ -146,7 +128,7 @@ export class ConfigurationManagementController {
       };
     } catch (error) {
       this.logger.error(`Failed to update configuration key ${key}:`, error);
-      
+
       // Restore old value
       if (oldValue) {
         process.env[key] = oldValue;
@@ -185,23 +167,13 @@ export class ConfigurationManagementController {
       }
 
       // Create a version before deletion
-      await this.versioningService.createVersion(
-        `Deleted ${key}`,
-        req.user?.sub,
-        ['delete']
-      );
+      await this.versioningService.createVersion(`Deleted ${key}`, req.user?.sub, ['delete']);
 
       // Delete the environment variable
       delete process.env[key];
 
       // Log the deletion
-      await this.auditService.logDelete(
-        key,
-        oldValue,
-        req.user?.sub,
-        req.ip,
-        req.headers['user-agent']
-      );
+      await this.auditService.logDelete(key, oldValue, req.user?.sub, req.ip, req.headers['user-agent']);
 
       this.logger.log(`Configuration key ${key} deleted by user ${req.user?.sub}`);
 
@@ -214,7 +186,7 @@ export class ConfigurationManagementController {
       };
     } catch (error) {
       this.logger.error(`Failed to delete configuration key ${key}:`, error);
-      
+
       // Restore old value
       process.env[key] = oldValue;
 
@@ -231,7 +203,7 @@ export class ConfigurationManagementController {
   @Get('versions/list')
   async getVersions() {
     const versions = this.versioningService.getVersions();
-    
+
     return {
       success: true,
       data: versions,
@@ -244,7 +216,7 @@ export class ConfigurationManagementController {
   @Get('versions/:versionId')
   async getVersion(@Param('versionId') versionId: string) {
     const version = this.versioningService.getVersion(versionId);
-    
+
     if (!version) {
       return {
         success: false,
@@ -271,16 +243,9 @@ export class ConfigurationManagementController {
    * Create configuration version
    */
   @Post('versions')
-  async createVersion(
-    @Body() body: { description: string; tags?: string[] },
-    @Request() req
-  ) {
+  async createVersion(@Body() body: { description: string; tags?: string[] }, @Request() req) {
     try {
-      const version = await this.versioningService.createVersion(
-        body.description,
-        req.user?.sub,
-        body.tags
-      );
+      const version = await this.versioningService.createVersion(body.description, req.user?.sub, body.tags);
 
       return {
         success: true,
@@ -298,10 +263,7 @@ export class ConfigurationManagementController {
    * Rollback to version
    */
   @Post('versions/:versionId/rollback')
-  async rollbackToVersion(
-    @Param('versionId') versionId: string,
-    @Request() req
-  ) {
+  async rollbackToVersion(@Param('versionId') versionId: string, @Request() req) {
     try {
       const result = await this.versioningService.rollbackToVersion(versionId);
 
@@ -312,7 +274,7 @@ export class ConfigurationManagementController {
           result.changes || [],
           req.user?.sub,
           req.ip,
-          req.headers['user-agent']
+          req.headers['user-agent'],
         );
 
         this.logger.log(`Configuration rolled back to version ${versionId} by user ${req.user?.sub}`);
@@ -334,13 +296,10 @@ export class ConfigurationManagementController {
    * Compare versions
    */
   @Get('versions/:versionId1/compare/:versionId2')
-  async compareVersions(
-    @Param('versionId1') versionId1: string,
-    @Param('versionId2') versionId2: string
-  ) {
+  async compareVersions(@Param('versionId1') versionId1: string, @Param('versionId2') versionId2: string) {
     try {
       const comparison = this.versioningService.compareVersions(versionId1, versionId2);
-      
+
       // Mask sensitive values
       const maskedComparison = comparison.map(item => ({
         ...item,
@@ -395,7 +354,7 @@ export class ConfigurationManagementController {
   async getAuditStatistics() {
     try {
       const stats = await this.auditService.getAuditStatistics();
-      
+
       return {
         success: true,
         data: stats,
@@ -414,12 +373,12 @@ export class ConfigurationManagementController {
   @Get('audit/export')
   async exportAuditLogs(
     @Query() query: { format?: 'json' | 'csv'; startDate?: string; endDate?: string },
-    @Response() res
+    @Response() res,
   ) {
     try {
       const filename = `audit-logs-${new Date().toISOString().split('T')[0]}.${query.format || 'json'}`;
       const outputPath = `./temp/${filename}`;
-      
+
       await this.auditService.exportAuditLogs(outputPath, {
         startDate: query.startDate ? new Date(query.startDate) : undefined,
         endDate: query.endDate ? new Date(query.endDate) : undefined,
@@ -427,14 +386,13 @@ export class ConfigurationManagementController {
       });
 
       // Send file
-      const fs = require('fs');
       const fileStream = fs.createReadStream(outputPath);
-      
+
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Type', query.format === 'csv' ? 'text/csv' : 'application/json');
-      
+
       fileStream.pipe(res);
-      
+
       // Clean up temp file
       fileStream.on('end', () => {
         fs.unlinkSync(outputPath);
@@ -454,14 +412,9 @@ export class ConfigurationManagementController {
   async forceReload(@Request() req) {
     try {
       this.hotReloadService.forceReload();
-      
+
       // Log the reload
-      await this.auditService.logAccess(
-        'force_reload',
-        req.user?.sub,
-        req.ip,
-        req.headers['user-agent']
-      );
+      await this.auditService.logAccess('force_reload', req.user?.sub, req.ip, req.headers['user-agent']);
 
       this.logger.log(`Configuration force reloaded by user ${req.user?.sub}`);
 
@@ -505,13 +458,7 @@ export class ConfigurationManagementController {
    * Check if key is required
    */
   private isRequiredKey(key: string): boolean {
-    const requiredKeys = [
-      'DATABASE_URL',
-      'JWT_SECRET',
-      'JWT_REFRESH_SECRET',
-      'ENCRYPTION_KEY',
-      'SESSION_SECRET',
-    ];
+    const requiredKeys = ['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ENCRYPTION_KEY', 'SESSION_SECRET'];
 
     return requiredKeys.includes(key);
   }

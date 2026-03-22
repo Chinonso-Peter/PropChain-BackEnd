@@ -1,6 +1,6 @@
 /**
  * Common Patterns Module Index
- * 
+ *
  * Centralized exports for module organization patterns and utilities
  */
 

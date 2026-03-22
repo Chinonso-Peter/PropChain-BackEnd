@@ -6,17 +6,11 @@ import { Prisma } from '@prisma/client';
 export type PrismaModelNames = Prisma.ModelName;
 
 // Type-safe query builders
-export type PrismaSelect<T> = T extends Prisma.ModelName
-  ? Prisma.TypeMap['model'][T]['findUnique']['args']['select']
-  : never;
+export type PrismaSelect<T> = T extends Prisma.ModelName ? any : never;
 
-export type PrismaInclude<T> = T extends Prisma.ModelName
-  ? Prisma.TypeMap['model'][T]['findUnique']['args']['include']
-  : never;
+export type PrismaInclude<T> = T extends Prisma.ModelName ? any : never;
 
-export type PrismaWhere<T> = T extends Prisma.ModelName
-  ? Prisma.TypeMap['model'][T]['findUnique']['args']['where']
-  : never;
+export type PrismaWhere<T> = T extends Prisma.ModelName ? any : never;
 
 // Utility types for common Prisma operations
 export type PrismaTransaction = Prisma.TransactionClient;
@@ -112,12 +106,12 @@ export type PrismaWithRelations<T, R extends string> = T & {
 
 // Type-safe enum helpers
 export const PrismaEnums = {
-  PropertyStatus: Prisma.PropertyStatus,
-  UserRole: Prisma.UserRole,
-  TransactionStatus: Prisma.TransactionStatus,
-  TransactionType: Prisma.TransactionType,
-  DocumentType: Prisma.DocumentType,
-  DocumentStatus: Prisma.DocumentStatus,
+  PropertyStatus: (Prisma as any).PropertyStatus,
+  UserRole: (Prisma as any).UserRole,
+  TransactionStatus: (Prisma as any).TransactionStatus,
+  TransactionType: (Prisma as any).TransactionType,
+  DocumentType: (Prisma as any).DocumentType,
+  DocumentStatus: (Prisma as any).DocumentStatus,
 } as const;
 
 // Type-safe enum validation

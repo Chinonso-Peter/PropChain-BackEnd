@@ -1,6 +1,6 @@
 /**
  * Database Optimization Module Index
- * 
+ *
  * Centralized exports for database optimization services and utilities
  */
 
@@ -13,19 +13,15 @@ export * from './connection.pool';
 /**
  * Re-export commonly used types and utilities
  */
-export {
-  QueryOptimizerService,
-  IndexStrategyService,
-  PerformanceMonitorService,
-  ConnectionPoolService,
-} from './query.optimizer';
+export { QueryOptimizerService } from './query.optimizer';
 
-export {
-  QueryStats,
-  QueryAnalysis,
-  IndexSuggestion,
-  OptimizationReport,
-} from './query.optimizer';
+export { IndexStrategyService } from './index.strategy';
+
+export { PerformanceMonitorService } from './performance.monitor';
+
+export { ConnectionPoolService } from './connection.pool';
+
+export { QueryStats, QueryAnalysis, IndexSuggestion, OptimizationReport } from './query.optimizer';
 
 export {
   IndexAnalysis,
@@ -42,8 +38,4 @@ export {
   PerformanceTrends,
 } from './performance.monitor';
 
-export {
-  PoolMetrics,
-  PoolStatus,
-  PoolOptimizationResult,
-} from './connection.pool';
+export { PoolMetrics, PoolStatus, PoolOptimizationResult } from './connection.pool';

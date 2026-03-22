@@ -4,7 +4,7 @@ import { EventEmitter } from 'events';
 
 /**
  * Database Performance Monitor Service
- * 
+ *
  * Monitors database performance metrics and provides alerts
  */
 @Injectable()
@@ -64,7 +64,7 @@ export class PerformanceMonitorService extends EventEmitter {
    */
   recordQuery(query: string, executionTime: number, success: boolean): void {
     this.metrics.totalQueries++;
-    
+
     if (executionTime > this.alertThresholds.slowQueryTime) {
       this.metrics.slowQueries++;
       this.emitAlert('SLOW_QUERY', {
@@ -75,7 +75,7 @@ export class PerformanceMonitorService extends EventEmitter {
 
     // Update response time metrics
     this.metrics.maxResponseTime = Math.max(this.metrics.maxResponseTime, executionTime);
-    this.metrics.avgResponseTime = 
+    this.metrics.avgResponseTime =
       (this.metrics.avgResponseTime * (this.metrics.totalQueries - 1) + executionTime) / this.metrics.totalQueries;
 
     if (this.metrics.avgResponseTime > this.alertThresholds.avgResponseTime) {
@@ -156,7 +156,8 @@ export class PerformanceMonitorService extends EventEmitter {
         slowQueryRate: this.metrics.totalQueries > 0 ? this.metrics.slowQueries / this.metrics.totalQueries : 0,
         avgResponseTime: this.metrics.avgResponseTime,
         maxResponseTime: this.metrics.maxResponseTime,
-        connectionUtilization: this.metrics.connections > 0 ? this.metrics.activeConnections / this.metrics.connections : 0,
+        connectionUtilization:
+          this.metrics.connections > 0 ? this.metrics.activeConnections / this.metrics.connections : 0,
         cacheHitRate: this.metrics.cacheHitRate,
       },
       alerts: this.getRecentAlerts(),
@@ -224,7 +225,7 @@ export class PerformanceMonitorService extends EventEmitter {
    */
   private startMonitoring(): void {
     const interval = this.configService.get<number>('PERFORMANCE_MONITORING_INTERVAL', 60000);
-    
+
     this.monitoringInterval = setInterval(() => {
       this.collectMetrics();
       this.checkAlerts();
@@ -251,9 +252,9 @@ export class PerformanceMonitorService extends EventEmitter {
     try {
       // This would collect actual metrics from the database
       // For now, we'll simulate some basic collection
-      
+
       this.metrics.timestamp = new Date();
-      
+
       // Emit metrics event for other services to consume
       this.emit('metrics', this.metrics);
     } catch (error) {
@@ -266,7 +267,7 @@ export class PerformanceMonitorService extends EventEmitter {
    */
   private checkAlerts(): void {
     const healthScore = this.getHealthScore();
-    
+
     if (healthScore.score < 50) {
       this.emitAlert('POOR_PERFORMANCE', {
         score: healthScore.score,
@@ -296,14 +297,14 @@ export class PerformanceMonitorService extends EventEmitter {
    */
   private getAlertSeverity(type: string): 'low' | 'medium' | 'high' | 'critical' {
     const severityMap: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {
-      'SLOW_QUERY': 'medium',
-      'HIGH_CONNECTION_UTILIZATION': 'high',
-      'HIGH_RESPONSE_TIME': 'high',
-      'LOW_CACHE_HIT_RATE': 'medium',
-      'UNUSED_INDEX': 'low',
-      'HIGH_LOCK_TIME': 'medium',
-      'DEADLOCK_DETECTED': 'critical',
-      'POOR_PERFORMANCE': 'critical',
+      SLOW_QUERY: 'medium',
+      HIGH_CONNECTION_UTILIZATION: 'high',
+      HIGH_RESPONSE_TIME: 'high',
+      LOW_CACHE_HIT_RATE: 'medium',
+      UNUSED_INDEX: 'low',
+      HIGH_LOCK_TIME: 'medium',
+      DEADLOCK_DETECTED: 'critical',
+      POOR_PERFORMANCE: 'critical',
     };
 
     return severityMap[type] || 'medium';
@@ -314,14 +315,14 @@ export class PerformanceMonitorService extends EventEmitter {
    */
   private getAlertMessage(type: string, data: any): string {
     const messages: Record<string, (data: any) => string> = {
-      'SLOW_QUERY': (data) => `Slow query detected: ${data.executionTime}ms`,
-      'HIGH_CONNECTION_UTILIZATION': (data) => `High connection utilization: ${(data.utilization * 100).toFixed(1)}%`,
-      'HIGH_RESPONSE_TIME': (data) => `High average response time: ${data.avgTime.toFixed(1)}ms`,
-      'LOW_CACHE_HIT_RATE': (data) => `Low cache hit rate: ${(data.hitRate * 100).toFixed(1)}%`,
-      'UNUSED_INDEX': (data) => `Unused index: ${data.indexName}`,
-      'HIGH_LOCK_TIME': (data) => `High lock time on table ${data.tableName}: ${data.avgLockTime}ms`,
-      'DEADLOCK_DETECTED': (data) => `Deadlock detected on table ${data.tableName}: ${data.deadlockCount} occurrences`,
-      'POOR_PERFORMANCE': (data) => `Poor performance score: ${data.score}/100`,
+      SLOW_QUERY: data => `Slow query detected: ${data.executionTime}ms`,
+      HIGH_CONNECTION_UTILIZATION: data => `High connection utilization: ${(data.utilization * 100).toFixed(1)}%`,
+      HIGH_RESPONSE_TIME: data => `High average response time: ${data.avgTime.toFixed(1)}ms`,
+      LOW_CACHE_HIT_RATE: data => `Low cache hit rate: ${(data.hitRate * 100).toFixed(1)}%`,
+      UNUSED_INDEX: data => `Unused index: ${data.indexName}`,
+      HIGH_LOCK_TIME: data => `High lock time on table ${data.tableName}: ${data.avgLockTime}ms`,
+      DEADLOCK_DETECTED: data => `Deadlock detected on table ${data.tableName}: ${data.deadlockCount} occurrences`,
+      POOR_PERFORMANCE: data => `Poor performance score: ${data.score}/100`,
     };
 
     return messages[type]?.(data) || `Performance alert: ${type}`;
@@ -389,6 +390,10 @@ export class PerformanceMonitorService extends EventEmitter {
     // This would calculate trends based on historical data
     // For now, return placeholder
     return {
+      queryCount: [],
+      responseTime: [],
+      connectionUtilization: [],
+      cacheHitRate: [],
       responseTimeTrend: 'stable',
       queryVolumeTrend: 'increasing',
       connectionUtilizationTrend: 'stable',
@@ -398,7 +403,7 @@ export class PerformanceMonitorService extends EventEmitter {
 }
 
 // Type definitions
-interface PerformanceMetrics {
+export interface PerformanceMetrics {
   connections: number;
   activeConnections: number;
   idleConnections: number;
@@ -412,20 +417,20 @@ interface PerformanceMetrics {
   timestamp: Date;
 }
 
-interface ConnectionMetrics {
+export interface ConnectionMetrics {
   total: number;
   active: number;
   idle: number;
 }
 
-interface TablePerformanceStats {
+export interface TablePerformanceStats {
   avgRowLockTime: number;
   deadlockCount: number;
   avgQueryTime: number;
   indexUsageStats: Map<string, number>;
 }
 
-interface PerformanceReport {
+export interface PerformanceReport {
   timestamp: Date;
   summary: {
     totalQueries: number;
@@ -441,7 +446,7 @@ interface PerformanceReport {
   trends: PerformanceTrends;
 }
 
-interface PerformanceAlert {
+export interface PerformanceAlert {
   type: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
@@ -449,15 +454,19 @@ interface PerformanceAlert {
   timestamp: Date;
 }
 
-interface HealthScore {
-  score: number;
-  status: 'excellent' | 'good' | 'fair' | 'poor';
-  issues: string[];
-}
-
-interface PerformanceTrends {
+export interface PerformanceTrends {
+  queryCount: number[];
+  responseTime: number[];
+  connectionUtilization: number[];
+  cacheHitRate: number[];
   responseTimeTrend: 'improving' | 'stable' | 'degrading';
   queryVolumeTrend: 'increasing' | 'stable' | 'decreasing';
   connectionUtilizationTrend: 'increasing' | 'stable' | 'decreasing';
   cacheHitRateTrend: 'improving' | 'stable' | 'degrading';
+}
+
+export interface HealthScore {
+  score: number;
+  status: 'excellent' | 'good' | 'fair' | 'poor';
+  issues: string[];
 }

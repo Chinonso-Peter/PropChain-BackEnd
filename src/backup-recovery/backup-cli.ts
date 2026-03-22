@@ -137,14 +137,14 @@ async function executeBackupVerification(app: any, backupId?: string) {
 
     if (result.tableIntegrity.errors.length > 0) {
       console.log(`\nErrors:`);
-      result.tableIntegrity.errors.forEach((e) => console.log(`  - ${e}`));
+      result.tableIntegrity.errors.forEach(e => console.log(`  - ${e}`));
     }
   } else {
     console.log('🔍 Verifying all backups...\n');
     const results = await verificationService.verifyAllBackups();
 
     console.log(`✅ Verified ${results.length} backups!\n`);
-    results.forEach((r) => {
+    results.forEach(r => {
       const status = r.restorable ? '✓' : '✗';
       console.log(`${status} ${r.backupId} - ${r.tableIntegrity.validTables}/${r.tableIntegrity.totalTables} tables`);
     });
@@ -211,7 +211,7 @@ async function executeDRTest(app: any, planId: string) {
 
   if (result.dataValidation.errors.length > 0) {
     console.log(`\nErrors:`);
-    result.dataValidation.errors.forEach((e) => console.log(`  - ${e}`));
+    result.dataValidation.errors.forEach(e => console.log(`  - ${e}`));
   }
 
   console.log();
@@ -306,14 +306,16 @@ function showHelp() {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) {
+    return '0 Bytes';
+  }
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error('Fatal error:', error);
   process.exit(1);
 });

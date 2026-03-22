@@ -28,10 +28,7 @@ export class DocumentBackupService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    this.backupDir = path.join(
-      process.cwd(),
-      this.configService.get('BACKUP_DIR') || 'backups/documents',
-    );
+    this.backupDir = path.join(process.cwd(), this.configService.get('BACKUP_DIR') || 'backups/documents');
     this.documentsDir = path.join(process.cwd(), 'uploads', 'documents');
     this.config = this.loadConfiguration();
     this.initializeBackupDirectory();
@@ -45,9 +42,7 @@ export class DocumentBackupService {
     return {
       enabled: this.configService.get('DOCUMENT_BACKUP_ENABLED', true),
       backupPath: this.configService.get('DOCUMENT_BACKUP_PATH', this.backupDir),
-      locations: this.parseStorageLocations(
-        this.configService.get('DOCUMENT_BACKUP_LOCATIONS', 'LOCAL,AZURE_BLOB'),
-      ),
+      locations: this.parseStorageLocations(this.configService.get('DOCUMENT_BACKUP_LOCATIONS', 'LOCAL,AZURE_BLOB')),
       encryption: this.configService.get('DOCUMENT_BACKUP_ENCRYPTION', true),
       versioning: this.configService.get('DOCUMENT_BACKUP_VERSIONING', true),
       maxVersions: this.configService.get('DOCUMENT_BACKUP_MAX_VERSIONS', 10),
@@ -59,7 +54,7 @@ export class DocumentBackupService {
    * Parse storage locations from comma-separated string
    */
   private parseStorageLocations(locations: string): StorageLocation[] {
-    return locations.split(',').map((loc) => {
+    return locations.split(',').map(loc => {
       const trimmed = loc.trim().toUpperCase();
       return (StorageLocation[trimmed] || StorageLocation.LOCAL) as StorageLocation;
     });
@@ -92,7 +87,7 @@ export class DocumentBackupService {
       const metadataDir = path.join(this.backupDir, 'metadata');
       if (fsSync.existsSync(metadataDir)) {
         const files = fsSync.readdirSync(metadataDir);
-        files.forEach((file) => {
+        files.forEach(file => {
           const content = fsSync.readFileSync(path.join(metadataDir, file), 'utf-8');
           const metadata: BackupMetadata = JSON.parse(content);
           this.backupMetadata.set(metadata.id, metadata);
@@ -185,9 +180,7 @@ export class DocumentBackupService {
       // Cleanup staging
       await fs.rm(stagingDir, { recursive: true, force: true });
 
-      this.logger.log(
-        `Document backup completed: ${backupId} (${metadata.size} bytes, ${documents} documents)`,
-      );
+      this.logger.log(`Document backup completed: ${backupId} (${metadata.size} bytes, ${documents} documents)`);
 
       return metadata;
     } catch (error) {
@@ -244,7 +237,9 @@ export class DocumentBackupService {
       const items = await fs.readdir(currentDir);
 
       for (const item of items) {
-        if (item === 'MANIFEST.json') continue;
+        if (item === 'MANIFEST.json') {
+          continue;
+        }
 
         const fullPath = path.join(currentDir, item);
         const relativePath = path.relative(dir, fullPath);
@@ -322,7 +317,9 @@ export class DocumentBackupService {
     const bucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
     const region = this.configService.get<string>('AWS_REGION');
 
-    if (!bucket) throw new Error('AWS S3 bucket not configured');
+    if (!bucket) {
+      throw new Error('AWS S3 bucket not configured');
+    }
 
     const fileName = path.basename(backupPath);
     const s3Path = `document-backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${fileName}`;
@@ -337,7 +334,9 @@ export class DocumentBackupService {
     const container = this.configService.get<string>('AZURE_BACKUP_CONTAINER');
     const account = this.configService.get<string>('AZURE_STORAGE_ACCOUNT');
 
-    if (!container || !account) throw new Error('Azure Blob Storage not configured');
+    if (!container || !account) {
+      throw new Error('Azure Blob Storage not configured');
+    }
 
     const fileName = path.basename(backupPath);
     const blobName = `document-backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${fileName}`;
@@ -353,7 +352,9 @@ export class DocumentBackupService {
   private async copyToGCP(backupPath: string): Promise<void> {
     const bucket = this.configService.get<string>('GCP_BACKUP_BUCKET');
 
-    if (!bucket) throw new Error('GCP Cloud Storage bucket not configured');
+    if (!bucket) {
+      throw new Error('GCP Cloud Storage bucket not configured');
+    }
 
     const fileName = path.basename(backupPath);
     const gcpPath = `document-backups/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${fileName}`;
@@ -391,7 +392,7 @@ export class DocumentBackupService {
       const hash = crypto.createHash('sha256');
       const stream = fsSync.createReadStream(filePath);
 
-      stream.on('data', (chunk) => hash.update(chunk));
+      stream.on('data', chunk => hash.update(chunk));
       stream.on('end', () => resolve(hash.digest('hex')));
       stream.on('error', reject);
     });
@@ -450,9 +451,7 @@ export class DocumentBackupService {
         throw new Error('Manifest file not found in backup');
       }
 
-      const manifest = JSON.parse(
-        fsSync.readFileSync(manifestPath, 'utf-8'),
-      );
+      const manifest = JSON.parse(fsSync.readFileSync(manifestPath, 'utf-8'));
 
       // Verify all files in manifest
       let validFiles = 0;
@@ -473,9 +472,7 @@ export class DocumentBackupService {
       metadata.verificationTimestamp = new Date();
       await this.saveBackupMetadata(metadata);
 
-      this.logger.log(
-        `Document backup verified: ${backupId} (${validFiles}/${manifest.documents.length} files valid)`,
-      );
+      this.logger.log(`Document backup verified: ${backupId} (${validFiles}/${manifest.documents.length} files valid)`);
 
       return validFiles === manifest.documents.length;
     } catch (error) {
@@ -493,10 +490,10 @@ export class DocumentBackupService {
     return {
       totalBackups: backups.length,
       totalSize: backups.reduce((sum, b) => sum + b.size, 0),
-      verifiedBackups: backups.filter((b) => b.verified).length,
-      failedBackups: backups.filter((b) => b.status === BackupStatus.FAILED).length,
+      verifiedBackups: backups.filter(b => b.verified).length,
+      failedBackups: backups.filter(b => b.status === BackupStatus.FAILED).length,
       averageDuration: Math.round(backups.reduce((sum, b) => sum + b.duration, 0) / backups.length || 0),
-      locations: [...new Set(backups.flatMap((b) => b.locations))],
+      locations: [...new Set(backups.flatMap(b => b.locations))],
     };
   }
 }

@@ -15,7 +15,7 @@ export class PropertiesController {
   constructor(
     private readonly propertiesService: PropertiesService,
     private readonly propertySearchService: PropertySearchService,
-  ) { }
+  ) {}
   @Post()
   @ApiOperation({ summary: 'Create a new property' })
   @ApiResponse({ status: 201, description: 'Property created successfully.', type: PropertyResponseDto })

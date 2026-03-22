@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Email Template Service
- * 
+ *
  * Handles dynamic email template rendering with personalization
  */
 @Injectable()
@@ -13,9 +13,12 @@ export class EmailTemplateService {
   /**
    * Render email template with dynamic content
    */
-  renderTemplate(templateName: string, data: any, locale: string = 'en'): string {
+  renderTemplate(templateName: string, data: any, locale: string = 'en'): EmailTemplate {
     const template = this.getTemplate(templateName, locale);
-    return this.processTemplate(template, data);
+    return {
+      subject: this.processStringTemplate(template.subject, data),
+      content: this.processStringTemplate(template.content, data),
+    };
   }
 
   /**
@@ -30,7 +33,14 @@ export class EmailTemplateService {
    * Process template with data substitution
    */
   private processTemplate(template: EmailTemplate, data: any): string {
-    let processedContent = template.content;
+    return this.processStringTemplate(template.content, data);
+  }
+
+  /**
+   * Process string template with data substitution
+   */
+  private processStringTemplate(template: string, data: any): string {
+    let processedContent = template;
 
     // Replace placeholders with actual data
     Object.keys(data).forEach(key => {
@@ -38,13 +48,13 @@ export class EmailTemplateService {
       const value = this.getNestedValue(data, key);
       processedContent = processedContent.replace(
         new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-        value || ''
+        value || '',
       );
     });
 
     // Process conditional blocks
     processedContent = this.processConditionals(processedContent, data);
-    
+
     // Process loops
     processedContent = this.processLoops(processedContent, data);
 
@@ -63,7 +73,7 @@ export class EmailTemplateService {
    */
   private processConditionals(content: string, data: any): string {
     const ifRegex = /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
-    
+
     return content.replace(ifRegex, (match, condition, blockContent) => {
       const value = this.getNestedValue(data, condition.trim());
       return value ? blockContent : '';
@@ -75,34 +85,38 @@ export class EmailTemplateService {
    */
   private processLoops(content: string, data: any): string {
     const eachRegex = /\{\{#each\s+([^}]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
-    
+
     return content.replace(eachRegex, (match, arrayPath, blockContent) => {
       const items = this.getNestedValue(data, arrayPath.trim());
-      
-      if (!Array.isArray(items)) return '';
-      
-      return items.map((item, index) => {
-        let itemContent = blockContent;
-        
-        // Replace {{this}} with current item
-        itemContent = itemContent.replace(/\{\{this\}\}/g, item);
-        
-        // Replace {{@index}} with current index
-        itemContent = itemContent.replace(/\{\{@index\}\}/g, index.toString());
-        
-        // Replace item properties
-        if (typeof item === 'object') {
-          Object.keys(item).forEach(key => {
-            const placeholder = `{{${key}}}`;
-            itemContent = itemContent.replace(
-              new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-              item[key] || ''
-            );
-          });
-        }
-        
-        return itemContent;
-      }).join('');
+
+      if (!Array.isArray(items)) {
+        return '';
+      }
+
+      return items
+        .map((item, index) => {
+          let itemContent = blockContent;
+
+          // Replace {{this}} with current item
+          itemContent = itemContent.replace(/\{\{this\}\}/g, item);
+
+          // Replace {{@index}} with current index
+          itemContent = itemContent.replace(/\{\{@index\}\}/g, index.toString());
+
+          // Replace item properties
+          if (typeof item === 'object') {
+            Object.keys(item).forEach(key => {
+              const placeholder = `{{${key}}}`;
+              itemContent = itemContent.replace(
+                new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                item[key] || '',
+              );
+            });
+          }
+
+          return itemContent;
+        })
+        .join('');
     });
   }
 
@@ -112,7 +126,7 @@ export class EmailTemplateService {
   private getTemplates(locale: string): Record<string, EmailTemplate> {
     const templates = {
       en: {
-        'welcome': {
+        welcome: {
           subject: 'Welcome to PropChain!',
           content: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -147,7 +161,7 @@ export class EmailTemplateService {
                 <p>© 2024 PropChain. All rights reserved.</p>
               </div>
             </div>
-          `
+          `,
         },
         'email-verification': {
           subject: 'Verify Your Email Address',
@@ -185,7 +199,7 @@ export class EmailTemplateService {
                 </p>
               </div>
             </div>
-          `
+          `,
         },
         'password-reset': {
           subject: 'Reset Your Password',
@@ -230,7 +244,7 @@ export class EmailTemplateService {
                 </p>
               </div>
             </div>
-          `
+          `,
         },
         'login-alert': {
           subject: 'New Login Detected',
@@ -272,9 +286,9 @@ export class EmailTemplateService {
                 {{/if}}
               </div>
             </div>
-          `
+          `,
         },
-        'default': {
+        default: {
           subject: 'PropChain Notification',
           content: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -286,9 +300,9 @@ export class EmailTemplateService {
                 <p style="color: #333; line-height: 1.6;">{{content}}</p>
               </div>
             </div>
-          `
-        }
-      }
+          `,
+        },
+      },
     };
 
     return templates[locale] || templates.en;
@@ -299,7 +313,7 @@ export class EmailTemplateService {
    */
   createABTestVariant(templateName: string, variant: 'A' | 'B', changes: Partial<EmailTemplate>): EmailTemplate {
     const originalTemplate = this.getTemplate(templateName, 'en');
-    
+
     return {
       subject: changes.subject || originalTemplate.subject,
       content: changes.content || originalTemplate.content,
@@ -312,10 +326,10 @@ export class EmailTemplateService {
   previewTemplate(templateName: string, data: any, locale: string = 'en'): EmailPreview {
     const template = this.getTemplate(templateName, locale);
     const renderedContent = this.processTemplate(template, data);
-    
+
     return {
       templateName,
-      subject: this.processTemplate({ subject: template.subject }, data),
+      subject: this.processStringTemplate(template.subject, data),
       content: renderedContent,
       locale,
       previewData: data,

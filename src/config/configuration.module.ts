@@ -11,21 +11,13 @@ import { ConfigAuditService } from './utils/config.audit';
 @Module({
   imports: [ConfigModule],
   providers: [
-    ConfigurationService, 
+    ConfigurationService,
     StartupValidationService,
     ConfigHotReloadService,
     ConfigVersioningService,
     ConfigAuditService,
   ],
-  controllers: [
-    ConfigurationController, 
-    ConfigurationManagementController,
-  ],
-  exports: [
-    ConfigurationService,
-    ConfigHotReloadService,
-    ConfigVersioningService,
-    ConfigAuditService,
-  ],
+  controllers: [ConfigurationController, ConfigurationManagementController],
+  exports: [ConfigurationService, ConfigHotReloadService, ConfigVersioningService, ConfigAuditService],
 })
 export class ConfigurationModule {}

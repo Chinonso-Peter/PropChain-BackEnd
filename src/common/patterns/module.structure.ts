@@ -1,28 +1,28 @@
 /**
  * Standard module structure patterns for PropChain Backend
- * 
+ *
  * This file defines the standardized organization patterns that all modules should follow
  * to ensure consistency across the codebase.
  */
 
 export interface ModuleStructure {
   // Core module files
-  module: string;           // [name].module.ts
-  controller?: string;     // [name].controller.ts
-  service?: string;        // [name].service.ts
-  
+  module: string; // [name].module.ts
+  controller?: string; // [name].controller.ts
+  service?: string; // [name].service.ts
+
   // Subdirectories
-  dto?: string[];          // Data Transfer Objects
-  entities?: string[];     // Database entities
+  dto?: string[]; // Data Transfer Objects
+  entities?: string[]; // Database entities
   repositories?: string[]; // Repository patterns
-  guards?: string[];       // Auth guards
+  guards?: string[]; // Auth guards
   interceptors?: string[]; // Request/response interceptors
-  middleware?: string[];   // Express middleware
-  strategies?: string[];   // Auth strategies
-  utils?: string[];        // Utility functions
-  types?: string[];         // TypeScript types
-  constants?: string[];    // Module constants
-  tests?: string[];        // Test files
+  middleware?: string[]; // Express middleware
+  strategies?: string[]; // Auth strategies
+  utils?: string[]; // Utility functions
+  types?: string[]; // TypeScript types
+  constants?: string[]; // Module constants
+  tests?: string[]; // Test files
 }
 
 export const STANDARD_MODULE_STRUCTURE: ModuleStructure = {
@@ -59,20 +59,20 @@ export const NAMING_CONVENTIONS = {
   UTILS: '[name].utils.ts',
   TYPES: '[name].types.ts',
   CONSTANTS: '[name].constants.ts',
-  
+
   // DTOs
   CREATE_DTO: 'create-[name].dto.ts',
   UPDATE_DTO: 'update-[name].dto.ts',
   RESPONSE_DTO: '[name].response.dto.ts',
   QUERY_DTO: '[name].query.dto.ts',
-  
+
   // Tests
   SERVICE_TEST: '[name].service.spec.ts',
   CONTROLLER_TEST: '[name].controller.spec.ts',
   E2E_TEST: '[name].e2e.spec.ts',
   UNIT_TEST: '[name].unit.spec.ts',
   INTEGRATION_TEST: '[name].integration.spec.ts',
-  
+
   // Classes and Interfaces
   CLASS_NAME: 'PascalCase',
   INTERFACE_NAME: 'PascalCase',
@@ -97,16 +97,9 @@ export const IMPORT_EXPORT_PATTERNS = {
     'Relative imports',
     'Type-only imports',
   ],
-  
+
   // Export patterns
-  MODULE_EXPORTS: [
-    'Services',
-    'Controllers',
-    'Repositories',
-    'Guards',
-    'Interceptors',
-    'Middleware',
-  ],
+  MODULE_EXPORTS: ['Services', 'Controllers', 'Repositories', 'Guards', 'Interceptors', 'Middleware'],
 };
 
 /**
@@ -118,13 +111,13 @@ export const DEPENDENCY_INJECTION_PATTERNS = {
     CONSTRUCTOR: 'constructor(private readonly serviceName: ServiceName) {}',
     INJECT_DECORATOR: '@Inject(SERVICE_TOKEN) private readonly serviceName: ServiceName',
   },
-  
+
   // Repository injection
   REPOSITORY_INJECTION: {
     CONSTRUCTOR: 'constructor(private readonly repository: Repository<Entity>) {}',
     INJECT_REPOSITORY: '@InjectRepository(Entity) private readonly repository: Repository<Entity>',
   },
-  
+
   // Config injection
   CONFIG_INJECTION: {
     CONSTRUCTOR: 'constructor(private readonly configService: ConfigService) {}',
@@ -388,30 +381,30 @@ export class ModuleStructureUtils {
    */
   static generateModuleStructure(name: string): ModuleStructure {
     const structure = { ...STANDARD_MODULE_STRUCTURE };
-    
+
     // Replace [name] placeholders with actual name
     const replaceName = (template: string) => template.replace(/\[name\]/g, name.toLowerCase());
-    
+
     if (structure.controller) {
       structure.controller = replaceName(structure.controller);
     }
-    
+
     if (structure.service) {
       structure.service = replaceName(structure.service);
     }
-    
+
     if (structure.dto) {
       structure.dto = structure.dto.map(replaceName);
     }
-    
+
     if (structure.entities) {
       structure.entities = structure.entities.map(replaceName);
     }
-    
+
     if (structure.repositories) {
       structure.repositories = structure.repositories.map(replaceName);
     }
-    
+
     return structure;
   }
 
@@ -425,7 +418,7 @@ export class ModuleStructureUtils {
   } {
     const errors: string[] = [];
     const warnings: string[] = [];
-    
+
     // This would implement actual file system checks
     // For now, return placeholder
     return {
@@ -441,14 +434,26 @@ export class ModuleStructureUtils {
   static getRecommendedStructure(name: string): string[] {
     const structure = this.generateModuleStructure(name);
     const files: string[] = [];
-    
-    if (structure.module) files.push(structure.module);
-    if (structure.controller) files.push(structure.controller);
-    if (structure.service) files.push(structure.service);
-    if (structure.dto) files.push(...structure.dto);
-    if (structure.entities) files.push(...structure.entities);
-    if (structure.repositories) files.push(...structure.repositories);
-    
+
+    if (structure.module) {
+      files.push(structure.module);
+    }
+    if (structure.controller) {
+      files.push(structure.controller);
+    }
+    if (structure.service) {
+      files.push(structure.service);
+    }
+    if (structure.dto) {
+      files.push(...structure.dto);
+    }
+    if (structure.entities) {
+      files.push(...structure.entities);
+    }
+    if (structure.repositories) {
+      files.push(...structure.repositories);
+    }
+
     return files;
   }
 }

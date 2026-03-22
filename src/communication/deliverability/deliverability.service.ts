@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Email Deliverability Service
- * 
+ *
  * Optimizes email deliverability and manages sender reputation
  */
 @Injectable()
@@ -99,16 +99,16 @@ export class DeliverabilityService {
 
     // Apply optimizations if auto-apply is enabled
     let optimizedData = { ...emailData };
-    
+
     if (emailData.autoApply) {
       if (subjectOptimization.optimizedSubject) {
         optimizedData.subject = subjectOptimization.optimizedSubject;
       }
-      
+
       if (contentOptimization.optimizedContent) {
         optimizedData.content = contentOptimization.optimizedContent;
       }
-      
+
       if (sendingOptimization.optimizedParameters) {
         optimizedData = { ...optimizedData, ...sendingOptimization.optimizedParameters };
       }
@@ -147,7 +147,7 @@ export class DeliverabilityService {
     for (let day = 1; day <= plan.durationDays; day++) {
       const dayResult = await this.executeWarmupDay(ipAddress, day, plan);
       results.push(dayResult);
-      
+
       totalSent += dayResult.sent;
       reputationChange += dayResult.reputationChange;
 
@@ -170,7 +170,7 @@ export class DeliverabilityService {
     const result: WarmupResult = {
       ipAddress,
       plan: plan.name,
-      durationDays: Math.min(day, plan.durationDays),
+      durationDays: plan.durationDays,
       totalSent,
       finalReputation: finalReputation.score,
       deliverabilityRate: totalSent > 0 ? results.reduce((sum, r) => sum + r.delivered, 0) / totalSent : 0,
@@ -350,12 +350,20 @@ export class DeliverabilityService {
 
     // Check for spam triggers
     const spamTriggers = [
-      'free', 'winner', 'cash', 'bonus', 'click here', 'congratulations',
-      'limited time', 'act now', 'urgent', 'special promotion',
+      'free',
+      'winner',
+      'cash',
+      'bonus',
+      'click here',
+      'congratulations',
+      'limited time',
+      'act now',
+      'urgent',
+      'special promotion',
     ];
 
-    const content = (emailData.subject + ' ' + emailData.content).toLowerCase();
-    
+    const content = `${emailData.subject} ${emailData.content}`.toLowerCase();
+
     for (const trigger of spamTriggers) {
       if (content.includes(trigger)) {
         issues.push({
@@ -415,11 +423,12 @@ export class DeliverabilityService {
     let score = 100;
 
     // Check for role-based addresses
-    const roleAddresses = recipients.filter(email => 
-      email.startsWith('info@') || 
-      email.startsWith('sales@') || 
-      email.startsWith('marketing@') ||
-      email.startsWith('noreply@')
+    const roleAddresses = recipients.filter(
+      email =>
+        email.startsWith('info@') ||
+        email.startsWith('sales@') ||
+        email.startsWith('marketing@') ||
+        email.startsWith('noreply@'),
     );
 
     if (roleAddresses.length > recipients.length * 0.5) {
@@ -460,7 +469,8 @@ export class DeliverabilityService {
     let score = 100;
 
     // Check sending frequency
-    if (emailData.sendRate > 100) { // More than 100 emails per hour
+    if (emailData.sendRate > 100) {
+      // More than 100 emails per hour
       issues.push({
         type: 'high_frequency',
         severity: 'high',
@@ -515,7 +525,7 @@ export class DeliverabilityService {
     // Check for spam triggers
     const spamWords = ['free', 'winner', 'urgent'];
     const lowerSubject = subject.toLowerCase();
-    
+
     for (const word of spamWords) {
       if (lowerSubject.includes(word)) {
         recommendations.push(`Remove or modify spam trigger word: "${word}"`);
@@ -524,7 +534,7 @@ export class DeliverabilityService {
 
     // Apply optimizations
     if (recommendations.length > 0 && subject.length > 50) {
-      optimizedSubject = subject.substring(0, 47) + '...';
+      optimizedSubject = `${subject.substring(0, 47)}...`;
     }
 
     return {
@@ -540,7 +550,7 @@ export class DeliverabilityService {
    */
   private optimizeContent(content: string): EmailOptimization {
     const recommendations: string[] = [];
-    let optimizedContent = content;
+    const optimizedContent = content;
 
     // Check image-to-text ratio
     const textLength = content.replace(/<[^>]*>/g, '').length;
@@ -585,7 +595,7 @@ export class DeliverabilityService {
 
     return {
       type: 'sending',
-      original: {},
+      original: '',
       optimizedContent: '',
       recommendations,
       optimizedParameters,
@@ -596,10 +606,12 @@ export class DeliverabilityService {
    * Calculate optimization score
    */
   private calculateOptimizationScore(optimizations: EmailOptimization[]): number {
-    if (optimizations.length === 0) return 100;
+    if (optimizations.length === 0) {
+      return 100;
+    }
 
     const totalScore = optimizations.reduce((sum, opt) => {
-      return sum + (opt.recommendations.length * 10);
+      return sum + opt.recommendations.length * 10;
     }, 0);
 
     return Math.max(0, 100 - totalScore);
@@ -611,7 +623,7 @@ export class DeliverabilityService {
   private async executeWarmupDay(ipAddress: string, day: number, plan: WarmupPlan): Promise<WarmupDayResult> {
     const dailyLimit = plan.dailyVolume[day - 1] || 10;
     const sent = Math.min(dailyLimit, 20); // Max 20 per day for warmup
-    const delivered = Math.floor(sent * (0.8 + (day * 0.02))); // Gradually improving deliverability
+    const delivered = Math.floor(sent * (0.8 + day * 0.02)); // Gradually improving deliverability
     const reputationChange = day * 2; // Improve reputation each day
 
     // Simulate sending emails
@@ -631,13 +643,15 @@ export class DeliverabilityService {
    * Get sender reputation
    */
   private getSenderReputation(sender: string): SenderReputation {
-    return this.senderReputation.get(sender) || {
-      score: 75,
-      spfConfigured: false,
-      dkimConfigured: false,
-      dmarcConfigured: false,
-      lastUpdated: new Date(),
-    };
+    return (
+      this.senderReputation.get(sender) || {
+        score: 75,
+        spfConfigured: false,
+        dkimConfigured: false,
+        dmarcConfigured: false,
+        lastUpdated: new Date(),
+      }
+    );
   }
 
   /**
@@ -651,20 +665,22 @@ export class DeliverabilityService {
    * Get deliverability metrics
    */
   private getDeliverabilityMetrics(sender: string): DeliverabilityMetrics {
-    return this.deliverabilityMetrics.get(sender) || {
-      totalSent: 1000,
-      delivered: 950,
-      bounced: 30,
-      complained: 5,
-      opened: 400,
-      clicked: 200,
-      spamScore: 2.5,
-      bounceRate: 3.0,
-      complaintRate: 0.5,
-      openRate: 42.1,
-      clickRate: 50.0,
-      lastUpdated: new Date(),
-    };
+    return (
+      this.deliverabilityMetrics.get(sender) || {
+        totalSent: 1000,
+        delivered: 950,
+        bounced: 30,
+        complained: 5,
+        opened: 400,
+        clicked: 200,
+        spamScore: 2.5,
+        bounceRate: 3.0,
+        complaintRate: 0.5,
+        openRate: 42.1,
+        clickRate: 50.0,
+        lastUpdated: new Date(),
+      }
+    );
   }
 
   /**
@@ -672,7 +688,7 @@ export class DeliverabilityService {
    */
   private calculateReputationHealthScore(reputation: SenderReputation, metrics: DeliverabilityMetrics): number {
     let score = reputation.score * 0.4; // 40% weight to reputation score
-    
+
     // Add deliverability metrics
     score += (100 - metrics.bounceRate) * 0.2; // 20% weight to bounce rate
     score += (100 - metrics.complaintRate * 10) * 0.2; // 20% weight to complaint rate
@@ -688,12 +704,11 @@ export class DeliverabilityService {
   private isSuspiciousDomain(domain: string): boolean {
     const suspiciousTlds = ['.tk', '.ml', '.ga', '.cf'];
     const suspiciousWords = ['spam', 'scam', 'fake', 'phish'];
-    
-    const tld = '.' + domain.split('.').pop();
+
+    const tld = `.${domain.split('.').pop()}`;
     const domainLower = domain.toLowerCase();
-    
-    return suspiciousTlds.includes(tld) || 
-           suspiciousWords.some(word => domainLower.includes(word));
+
+    return suspiciousTlds.includes(tld) || suspiciousWords.some(word => domainLower.includes(word));
   }
 
   /**
@@ -704,11 +719,11 @@ export class DeliverabilityService {
     next.setHours(9);
     next.setMinutes(0);
     next.setSeconds(0);
-    
+
     if (next <= currentTime) {
       next.setDate(next.getDate() + 1);
     }
-    
+
     return next;
   }
 
@@ -741,6 +756,16 @@ export class DeliverabilityService {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Generate recommendations from issues
+   */
+  private generateRecommendations(issues: DeliverabilityIssue[]): string[] {
+    return issues
+      .filter(issue => issue.recommendation)
+      .map(issue => issue.recommendation!)
+      .filter((rec, index, arr) => arr.indexOf(rec) === index); // Remove duplicates
   }
 }
 

@@ -24,7 +24,7 @@ export class EnvValidator {
 
     for (const [key, config] of Object.entries(requiredVars)) {
       const value = this.configService.get(key);
-      
+
       if (!value) {
         errors.push(`Missing required environment variable: ${key}`);
         continue;
@@ -69,11 +69,14 @@ export class EnvValidator {
   /**
    * Get all required environment variables with their validation rules
    */
-  private static getRequiredVariables(): Record<string, {
-    type: 'string' | 'url' | 'email' | 'number' | 'ethereum-address' | 'private-key';
-    validator?: (value: string) => boolean;
-    description: string;
-  }> {
+  private static getRequiredVariables(): Record<
+    string,
+    {
+      type: 'string' | 'url' | 'email' | 'number' | 'ethereum-address' | 'private-key';
+      validator?: (value: string) => boolean;
+      description: string;
+    }
+  > {
     return {
       // Database
       DATABASE_URL: {
@@ -129,13 +132,7 @@ export class EnvValidator {
    * Perform security checks on environment variables
    */
   private static performSecurityChecks(errors: string[]): void {
-    const securityVars = [
-      'JWT_SECRET',
-      'JWT_REFRESH_SECRET',
-      'ENCRYPTION_KEY',
-      'PRIVATE_KEY',
-      'SESSION_SECRET',
-    ];
+    const securityVars = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'ENCRYPTION_KEY', 'PRIVATE_KEY', 'SESSION_SECRET'];
 
     for (const key of securityVars) {
       const value = this.configService.get(key);

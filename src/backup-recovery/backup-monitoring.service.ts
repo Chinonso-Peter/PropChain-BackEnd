@@ -27,7 +27,7 @@ export class BackupMonitoringService {
    */
   private initializeAlertChannels(): void {
     const channels = this.configService.get('ALERT_CHANNELS', 'email,slack');
-    channels.split(',').forEach((channel) => {
+    channels.split(',').forEach(channel => {
       const trimmed = channel.trim().toLowerCase();
       if (trimmed) {
         this.enabledAlertChannels.add(trimmed);
@@ -141,9 +141,7 @@ export class BackupMonitoringService {
       const percentChange = (sizeDifference / previousBackup.size) * 100;
 
       if (percentChange > 50) {
-        this.logger.warn(
-          `Backup size changed significantly: ${percentChange.toFixed(2)}% increase/decrease`,
-        );
+        this.logger.warn(`Backup size changed significantly: ${percentChange.toFixed(2)}% increase/decrease`);
 
         await this.createAlert({
           type: 'BACKUP_FAILED',
@@ -319,12 +317,7 @@ export class BackupMonitoringService {
    * Create a new alert
    */
   private async createAlert(alertData: {
-    type:
-      | 'BACKUP_FAILED'
-      | 'BACKUP_TIMEOUT'
-      | 'STORAGE_FULL'
-      | 'REPLICATION_FAILED'
-      | 'VERIFICATION_FAILED';
+    type: 'BACKUP_FAILED' | 'BACKUP_TIMEOUT' | 'STORAGE_FULL' | 'REPLICATION_FAILED' | 'VERIFICATION_FAILED';
     severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
     message: string;
     backupId?: string;
@@ -333,10 +326,7 @@ export class BackupMonitoringService {
 
     // Check if similar alert exists (deduplication)
     const existingAlert = Array.from(this.alerts.values()).find(
-      (a) =>
-        a.type === alertData.type &&
-        !a.resolved &&
-        new Date(a.timestamp).getTime() > Date.now() - 3600000, // Within 1 hour
+      a => a.type === alertData.type && !a.resolved && new Date(a.timestamp).getTime() > Date.now() - 3600000, // Within 1 hour
     );
 
     if (existingAlert) {
@@ -446,10 +436,7 @@ export class BackupMonitoringService {
       fsSync.mkdirSync(alertsDir, { recursive: true });
     }
 
-    await fs.writeFile(
-      path.join(alertsDir, `${alert.id}.json`),
-      JSON.stringify(alert, null, 2),
-    );
+    await fs.writeFile(path.join(alertsDir, `${alert.id}.json`), JSON.stringify(alert, null, 2));
   }
 
   /**
@@ -457,11 +444,11 @@ export class BackupMonitoringService {
    */
   async getActiveAlerts(severity?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'): Promise<BackupAlert[]> {
     const alerts = Array.from(this.alerts.values())
-      .filter((a) => !a.resolved)
+      .filter(a => !a.resolved)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     if (severity) {
-      return alerts.filter((a) => a.severity === severity);
+      return alerts.filter(a => a.severity === severity);
     }
 
     return alerts;
@@ -512,7 +499,7 @@ export class BackupMonitoringService {
     const highAlerts = this.getActiveAlerts('HIGH');
 
     const backupMetadataDir = path.join(this.backupDir, 'database', 'metadata');
-    let recentBackups: BackupMetadata[] = [];
+    const recentBackups: BackupMetadata[] = [];
 
     if (fsSync.existsSync(backupMetadataDir)) {
       const files = fsSync.readdirSync(backupMetadataDir).slice(-10); // Last 10 backups
@@ -529,9 +516,7 @@ export class BackupMonitoringService {
         high: (await highAlerts).length,
         total: this.alerts.size,
       },
-      recentBackups: recentBackups.sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-      ),
+      recentBackups: recentBackups.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       systemHealth: {
         status: (await criticalAlerts).length === 0 ? 'HEALTHY' : 'DEGRADED',
         lastCheck: new Date(),

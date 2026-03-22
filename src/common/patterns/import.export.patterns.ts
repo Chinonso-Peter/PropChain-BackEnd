@@ -1,6 +1,6 @@
 /**
  * Standard import/export patterns for PropChain Backend
- * 
+ *
  * This file defines the standardized import/export patterns that all modules should follow
  * to ensure consistency and maintainability across the codebase.
  */
@@ -27,10 +27,10 @@ export const STANDARD_IMPORT_PATTERNS: ImportPattern[] = [
     order: 1,
     description: 'External libraries from node_modules',
     examples: [
-      'import { Injectable, Logger } from \'@nestjs/common\';',
-      'import { ConfigService } from \'@nestjs/config\';',
-      'import * as fs from \'fs\';',
-      'import * as path from \'path\';',
+      "import { Injectable, Logger } from '@nestjs/common';",
+      "import { ConfigService } from '@nestjs/config';",
+      "import * as fs from 'fs';",
+      "import * as path from 'path';",
     ],
   },
   {
@@ -38,10 +38,10 @@ export const STANDARD_IMPORT_PATTERNS: ImportPattern[] = [
     order: 2,
     description: 'NestJS specific modules and decorators',
     examples: [
-      'import { Module } from \'@nestjs/common\';',
-      'import { TypeOrmModule } from \'@nestjs/typeorm\';',
-      'import { InjectRepository } from \'@nestjs/typeorm\';',
-      'import { JwtAuthGuard } from \'../auth/guards/jwt-auth.guard\';',
+      "import { Module } from '@nestjs/common';",
+      "import { TypeOrmModule } from '@nestjs/typeorm';",
+      "import { InjectRepository } from '@nestjs/typeorm';",
+      "import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';",
     ],
   },
   {
@@ -49,9 +49,9 @@ export const STANDARD_IMPORT_PATTERNS: ImportPattern[] = [
     order: 3,
     description: 'Internal modules from different directories',
     examples: [
-      'import { UserService } from \'../users/user.service\';',
-      'import { PropertyEntity } from \'../properties/property.entity\';',
-      'import { ConfigAuditService } from \'../config/utils/config.audit\';',
+      "import { UserService } from '../users/user.service';",
+      "import { PropertyEntity } from '../properties/property.entity';",
+      "import { ConfigAuditService } from '../config/utils/config.audit';",
     ],
   },
   {
@@ -59,9 +59,9 @@ export const STANDARD_IMPORT_PATTERNS: ImportPattern[] = [
     order: 4,
     description: 'Relative imports from same module',
     examples: [
-      'import { CreatePropertyDto } from \'./dto/create-property.dto\';',
-      'import { PropertyEntity } from \'./property.entity\';',
-      'import { PropertyRepository } from \'./property.repository\';',
+      "import { CreatePropertyDto } from './dto/create-property.dto';",
+      "import { PropertyEntity } from './property.entity';",
+      "import { PropertyRepository } from './property.repository';",
     ],
   },
   {
@@ -69,9 +69,9 @@ export const STANDARD_IMPORT_PATTERNS: ImportPattern[] = [
     order: 5,
     description: 'Type-only imports (should use import type)',
     examples: [
-      'import type { Request } from \'express\';',
-      'import type { User } from \'../users/user.types\';',
-      'import type { CreatePropertyDto } from \'./dto/create-property.dto\';',
+      "import type { Request } from 'express';",
+      "import type { User } from '../users/user.types';",
+      "import type { CreatePropertyDto } from './dto/create-property.dto';",
     ],
   },
 ];
@@ -131,11 +131,11 @@ export class ImportOrganizer {
     return imports.sort((a, b) => {
       const orderA = this.getImportOrder(a);
       const orderB = this.getImportOrder(b);
-      
+
       if (orderA !== orderB) {
         return orderA - orderB;
       }
-      
+
       // Within same group, sort alphabetically
       return a.localeCompare(b);
     });
@@ -146,27 +146,27 @@ export class ImportOrganizer {
    */
   private static getImportOrder(importStatement: string): number {
     const lowerImport = importStatement.toLowerCase();
-    
+
     // Type-only imports
     if (lowerImport.includes('import type')) {
       return 5;
     }
-    
+
     // Relative imports
     if (lowerImport.includes('./') || lowerImport.includes('../')) {
       return 4;
     }
-    
+
     // Internal modules (check for known internal patterns)
     if (lowerImport.includes('../') || lowerImport.includes('@propchain')) {
       return 3;
     }
-    
+
     // NestJS modules
     if (lowerImport.includes('@nestjs')) {
       return 2;
     }
-    
+
     // External libraries
     return 1;
   }
@@ -194,25 +194,25 @@ export class ImportOrganizer {
   /**
    * Get import type
    */
-  private static getImportType(importStatement: string): keyof typeof groups {
+  private static getImportType(importStatement: string): string {
     const lowerImport = importStatement.toLowerCase();
-    
+
     if (lowerImport.includes('import type')) {
       return 'typeOnly';
     }
-    
+
     if (lowerImport.includes('./') || lowerImport.includes('../')) {
       return 'relative';
     }
-    
+
     if (lowerImport.includes('../') || lowerImport.includes('@propchain')) {
       return 'internal';
     }
-    
+
     if (lowerImport.includes('@nestjs')) {
       return 'nestjs';
     }
-    
+
     return 'external';
   }
 
@@ -222,22 +222,22 @@ export class ImportOrganizer {
   static formatImports(imports: string[]): string {
     const grouped = this.groupImportsByType(imports);
     const sorted = this.sortImports(imports);
-    
+
     let formatted = '';
     let lastOrder = 0;
-    
+
     for (const importStatement of sorted) {
       const order = this.getImportOrder(importStatement);
-      
+
       // Add blank line between different import groups
       if (order > lastOrder && formatted.length > 0) {
         formatted += '\n';
       }
-      
-      formatted += importStatement + '\n';
+
+      formatted += `${importStatement}\n`;
       lastOrder = order;
     }
-    
+
     return formatted.trim();
   }
 }
@@ -249,57 +249,63 @@ export class ExportOrganizer {
   /**
    * Generate standard export statements for a module
    */
-  static generateExports(moduleName: string, components: {
-    service?: boolean;
-    controller?: boolean;
-    repository?: boolean;
-    guard?: boolean;
-    interceptor?: boolean;
-    middleware?: boolean;
-  }): string {
+  static generateExports(
+    moduleName: string,
+    components: {
+      service?: boolean;
+      controller?: boolean;
+      repository?: boolean;
+      guard?: boolean;
+      interceptor?: boolean;
+      middleware?: boolean;
+    },
+  ): string {
     const exports: string[] = [];
-    
+
     if (components.service) {
       exports.push(`export { ${moduleName}Service } from './${moduleName.toLowerCase()}.service';`);
     }
-    
+
     if (components.controller) {
       exports.push(`export { ${moduleName}Controller } from './${moduleName.toLowerCase()}.controller';`);
     }
-    
+
     if (components.repository) {
       exports.push(`export { ${moduleName}Repository } from './${moduleName.toLowerCase()}.repository';`);
     }
-    
+
     if (components.guard) {
       exports.push(`export { ${moduleName}Guard } from './${moduleName.toLowerCase()}.guard';`);
     }
-    
+
     if (components.interceptor) {
       exports.push(`export { ${moduleName}Interceptor } from './${moduleName.toLowerCase()}.interceptor';`);
     }
-    
+
     if (components.middleware) {
       exports.push(`export { ${moduleName}Middleware } from './${moduleName.toLowerCase()}.middleware';`);
     }
-    
+
     return exports.join('\n');
   }
 
   /**
    * Generate index file for module
    */
-  static generateIndexFile(moduleName: string, components: {
-    service?: boolean;
-    controller?: boolean;
-    repository?: boolean;
-    guard?: boolean;
-    interceptor?: boolean;
-    middleware?: boolean;
-    dto?: string[];
-    entities?: string[];
-    types?: string[];
-  }): string {
+  static generateIndexFile(
+    moduleName: string,
+    components: {
+      service?: boolean;
+      controller?: boolean;
+      repository?: boolean;
+      guard?: boolean;
+      interceptor?: boolean;
+      middleware?: boolean;
+      dto?: string[];
+      entities?: string[];
+      types?: string[];
+    },
+  ): string {
     let content = `/**
  * ${moduleName} Module Index
  * 
@@ -349,12 +355,12 @@ export class CodeFormatter {
   static formatFile(content: string): string {
     // Remove extra blank lines
     content = content.replace(/\n\s*\n\s*\n/g, '\n\n');
-    
+
     // Ensure file ends with newline
     if (!content.endsWith('\n')) {
       content += '\n';
     }
-    
+
     return content;
   }
 
@@ -366,7 +372,7 @@ export class CodeFormatter {
     const importLines: string[] = [];
     const otherLines: string[] = [];
     let inImports = false;
-    
+
     for (const line of lines) {
       if (line.trim().startsWith('import')) {
         importLines.push(line);
@@ -378,9 +384,9 @@ export class CodeFormatter {
         inImports = false;
       }
     }
-    
+
     const formattedImports = ImportOrganizer.formatImports(importLines);
-    return formattedImports + '\n\n' + otherLines.join('\n');
+    return `${formattedImports}\n\n${otherLines.join('\n')}`;
   }
 
   /**
@@ -393,24 +399,27 @@ export class CodeFormatter {
   } {
     const errors: string[] = [];
     const warnings: string[] = [];
-    
+
     // Check for proper import order
     const lines = content.split('\n');
     const importLines = lines.filter(line => line.trim().startsWith('import'));
     const sortedImports = ImportOrganizer.sortImports(importLines);
-    
+
     if (JSON.stringify(importLines) !== JSON.stringify(sortedImports)) {
       warnings.push('Imports are not in the correct order');
     }
-    
+
     // Check for type-only imports
     for (const line of lines) {
-      if (line.includes('import') && !line.includes('import type') && 
-          (line.includes('type ') || line.includes('interface ') || line.includes('enum '))) {
+      if (
+        line.includes('import') &&
+        !line.includes('import type') &&
+        (line.includes('type ') || line.includes('interface ') || line.includes('enum '))
+      ) {
         warnings.push(`Consider using 'import type' for: ${line.trim()}`);
       }
     }
-    
+
     return {
       isValid: errors.length === 0,
       errors,

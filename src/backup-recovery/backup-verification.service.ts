@@ -5,6 +5,8 @@ import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { BackupIntegrityCheck, BackupMetadata, BackupStatus } from './backup.types';
 
 /**
@@ -194,7 +196,7 @@ export class BackupVerificationService {
     try {
       const buffer = Buffer.alloc(8);
       const fd = fsSync.openSync(filePath, 'r');
-      fsSync.readSync(fd, buffer, 0, 8);
+      fsSync.readSync(fd, buffer, 0, 8, 0);
       fsSync.closeSync(fd);
 
       // Check for PostgreSQL dump signature
@@ -216,15 +218,16 @@ export class BackupVerificationService {
   private async verifyTarBackup(filePath: string, check: BackupIntegrityCheck): Promise<void> {
     try {
       // Try to list tar contents to verify integrity
-      const { exec } = require('child_process');
-      const { promisify } = require('util');
       const execAsync = promisify(exec);
 
       const command = filePath.endsWith('.gz') ? `tar -tzf` : `tar -tf`;
 
       const { stdout } = await execAsync(`${command} ${filePath} | head -20`);
 
-      const files = stdout.trim().split('\n').filter((f: string) => f.length > 0);
+      const files = stdout
+        .trim()
+        .split('\n')
+        .filter((f: string) => f.length > 0);
 
       if (files.length === 0) {
         check.tableIntegrity.errors.push('Tar archive appears empty');
@@ -251,7 +254,7 @@ export class BackupVerificationService {
       const hash = crypto.createHash('sha256');
       const stream = fsSync.createReadStream(filePath);
 
-      stream.on('data', (chunk) => hash.update(chunk));
+      stream.on('data', chunk => hash.update(chunk));
       stream.on('end', () => resolve(hash.digest('hex')));
       stream.on('error', reject);
     });
@@ -284,11 +287,7 @@ export class BackupVerificationService {
     }
 
     // Try to load from disk
-    const verificationPath = path.join(
-      this.backupDir,
-      'verification',
-      `${backupId}_verification.json`,
-    );
+    const verificationPath = path.join(this.backupDir, 'verification', `${backupId}_verification.json`);
 
     if (fsSync.existsSync(verificationPath)) {
       const content = fsSync.readFileSync(verificationPath, 'utf-8');
@@ -396,12 +395,7 @@ export class BackupVerificationService {
       await fs.copyFile(backupPath, archivePath);
 
       metadata.status = BackupStatus.ARCHIVED;
-      const metadataPath = path.join(
-        this.backupDir,
-        'database',
-        'metadata',
-        `${metadata.id}.json`,
-      );
+      const metadataPath = path.join(this.backupDir, 'database', 'metadata', `${metadata.id}.json`);
       await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
 
       this.logger.log(`Backup archived: ${metadata.id}`);

@@ -20,7 +20,7 @@ export class ConfigHotReloadService extends EventEmitter {
    */
   startWatching(): void {
     const configFiles = this.getConfigFiles();
-    
+
     for (const configFile of configFiles) {
       if (fs.existsSync(configFile)) {
         this.watchConfigFile(configFile);
@@ -45,13 +45,7 @@ export class ConfigHotReloadService extends EventEmitter {
    * Get list of configuration files to watch
    */
   private getConfigFiles(): string[] {
-    const files = [
-      '.env',
-      '.env.local',
-      '.env.development',
-      '.env.staging',
-      '.env.production',
-    ];
+    const files = ['.env', '.env.local', '.env.development', '.env.staging', '.env.production'];
 
     const baseDir = process.cwd();
     return files.map(file => path.join(baseDir, file));
@@ -68,11 +62,11 @@ export class ConfigHotReloadService extends EventEmitter {
     });
 
     this.watchers.push(watcher);
-    
+
     // Store initial modification time
     const stats = fs.statSync(filePath);
     this.lastModified.set(filePath, stats.mtime);
-    
+
     this.logger.debug(`Watching configuration file: ${filePath}`);
   }
 
@@ -83,21 +77,21 @@ export class ConfigHotReloadService extends EventEmitter {
     try {
       const stats = fs.statSync(filePath);
       const lastMod = this.lastModified.get(filePath);
-      
+
       // Avoid duplicate events
       if (lastMod && stats.mtime <= lastMod) {
         return;
       }
 
       this.lastModified.set(filePath, stats.mtime);
-      
+
       // Read and parse the new configuration
       const newConfig = this.parseConfigFile(filePath);
       const oldConfig = this.configCache.get(filePath) || {};
 
       // Detect changes
       const changes = this.detectChanges(oldConfig, newConfig);
-      
+
       if (changes.length > 0) {
         this.logger.log(`Configuration changes detected in ${filePath}:`);
         changes.forEach(change => {
@@ -118,7 +112,10 @@ export class ConfigHotReloadService extends EventEmitter {
         this.notifyConfigReload(filePath, changes);
       }
     } catch (error) {
-      this.logger.error(`Error handling config change for ${filePath}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Error handling config change for ${filePath}:`,
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -128,7 +125,7 @@ export class ConfigHotReloadService extends EventEmitter {
   private parseConfigFile(filePath: string): Record<string, string> {
     const content = fs.readFileSync(filePath, 'utf8');
     const config: Record<string, string> = {};
-    
+
     const lines = content.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
@@ -143,14 +140,17 @@ export class ConfigHotReloadService extends EventEmitter {
         }
       }
     }
-    
+
     return config;
   }
 
   /**
    * Detect changes between old and new configuration
    */
-  private detectChanges(oldConfig: Record<string, string>, newConfig: Record<string, string>): Array<{
+  private detectChanges(
+    oldConfig: Record<string, string>,
+    newConfig: Record<string, string>,
+  ): Array<{
     key: string;
     oldValue: string;
     newValue: string;
@@ -208,13 +208,13 @@ export class ConfigHotReloadService extends EventEmitter {
    */
   forceReload(): void {
     const configFiles = this.getConfigFiles();
-    
+
     for (const configFile of configFiles) {
       if (fs.existsSync(configFile)) {
         this.handleConfigChange(configFile);
       }
     }
-    
+
     this.logger.log('Force reloaded all configuration files');
   }
 }

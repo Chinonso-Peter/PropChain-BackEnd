@@ -1,20 +1,19 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, BadRequestException } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 /**
  * Request Validation and Sanitization Interceptor
- * 
+ *
  * Validates and sanitizes incoming requests to prevent injection attacks
  */
 @Injectable()
 export class RequestValidationInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    
+
     // Validate and sanitize request
     this.validateAndSanitizeRequest(request);
-    
+
     return next.handle();
   }
 
@@ -26,20 +25,20 @@ export class RequestValidationInterceptor implements NestInterceptor {
     if (request.query) {
       request.query = this.sanitizeObject(request.query);
     }
-    
+
     // Sanitize request body
     if (request.body) {
       request.body = this.sanitizeObject(request.body);
     }
-    
+
     // Sanitize path parameters
     if (request.params) {
       request.params = this.sanitizeObject(request.params);
     }
-    
+
     // Validate request size
     this.validateRequestSize(request);
-    
+
     // Check for potential injection attacks
     this.checkForInjectionAttacks(request);
   }
@@ -52,12 +51,12 @@ export class RequestValidationInterceptor implements NestInterceptor {
       return obj;
     }
 
-    const sanitized = Array.isArray(obj) ? [] : {};
+    const sanitized: any = Array.isArray(obj) ? [] : {};
 
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         const value = obj[key];
-        
+
         if (typeof value === 'string') {
           // Remove potentially dangerous characters
           sanitized[key] = this.sanitizeString(value);
@@ -76,13 +75,15 @@ export class RequestValidationInterceptor implements NestInterceptor {
    * Sanitize string values
    */
   private sanitizeString(str: string): string {
-    return str
-      // Remove null bytes
-      .replace(/\x00/g, '')
-      // Remove control characters except newlines and tabs
-      .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-      // Trim whitespace
-      .trim();
+    return (
+      str
+        // Remove null bytes
+        .replace(/\x00/g, '')
+        // Remove control characters except newlines and tabs
+        .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+        // Trim whitespace
+        .trim()
+    );
   }
 
   /**
@@ -91,7 +92,7 @@ export class RequestValidationInterceptor implements NestInterceptor {
   private validateRequestSize(request: any): void {
     const maxSize = 10 * 1024 * 1024; // 10MB
     const size = JSON.stringify(request).length;
-    
+
     if (size > maxSize) {
       throw new BadRequestException('Request size exceeds maximum allowed size');
     }

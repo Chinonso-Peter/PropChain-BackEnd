@@ -7,7 +7,7 @@ import * as path from 'path';
 
 /**
  * Module Organization Service
- * 
+ *
  * Service for organizing and standardizing module structure across the codebase
  */
 @Injectable()
@@ -48,11 +48,11 @@ export class ModuleOrganizationService {
     try {
       if (fs.existsSync(modulePath)) {
         const items = fs.readdirSync(modulePath);
-        
+
         for (const item of items) {
           const itemPath = path.join(modulePath, item);
           const stats = fs.statSync(itemPath);
-          
+
           if (stats.isDirectory()) {
             structure.directories.push({
               name: item,
@@ -108,13 +108,23 @@ export class ModuleOrganizationService {
     // Check for required files
     for (const file of structure.files) {
       const name = file.name.toLowerCase();
-      
-      if (name.includes('.module.ts')) compliance.hasModule = true;
-      if (name.includes('.service.ts')) compliance.hasService = true;
-      if (name.includes('.controller.ts')) compliance.hasController = true;
-      if (name.includes('dto')) compliance.hasDto = true;
-      if (name.includes('.spec.ts') || name.includes('.test.ts')) compliance.hasTests = true;
-      
+
+      if (name.includes('.module.ts')) {
+        compliance.hasModule = true;
+      }
+      if (name.includes('.service.ts')) {
+        compliance.hasService = true;
+      }
+      if (name.includes('.controller.ts')) {
+        compliance.hasController = true;
+      }
+      if (name.includes('dto')) {
+        compliance.hasDto = true;
+      }
+      if (name.includes('.spec.ts') || name.includes('.test.ts')) {
+        compliance.hasTests = true;
+      }
+
       // Check import order in files
       if (file.content) {
         const validation = CodeFormatter.validatePatterns(file.content);
@@ -173,7 +183,7 @@ export class ModuleOrganizationService {
    */
   createModuleStructure(moduleName: string, targetPath: string): void {
     const structure = ModuleStructureUtils.generateModuleStructure(moduleName);
-    
+
     // Create main directory
     if (!fs.existsSync(targetPath)) {
       fs.mkdirSync(targetPath, { recursive: true });
@@ -196,7 +206,7 @@ export class ModuleOrganizationService {
    */
   generateModuleFiles(moduleName: string, targetPath: string): void {
     const lowerName = moduleName.toLowerCase();
-    
+
     // Generate module file
     const moduleContent = this.generateModuleFile(moduleName);
     fs.writeFileSync(path.join(targetPath, `${lowerName}.module.ts`), moduleContent);
@@ -225,7 +235,7 @@ export class ModuleOrganizationService {
    */
   private generateModuleFile(moduleName: string): string {
     const lowerName = moduleName.toLowerCase();
-    
+
     return `/**
  * ${moduleName} Module
  * 
@@ -262,7 +272,7 @@ export class ${moduleName}Module {}
    */
   private generateServiceFile(moduleName: string): string {
     const lowerName = moduleName.toLowerCase();
-    
+
     return `/**
  * ${moduleName} Service
  * 
@@ -371,7 +381,7 @@ export class ${moduleName}Service {
    */
   private generateControllerFile(moduleName: string): string {
     const lowerName = moduleName.toLowerCase();
-    
+
     return `/**
  * ${moduleName} Controller
  * 
@@ -619,15 +629,15 @@ describe('${moduleName}Controller', () => {
    */
   reorganizeModule(modulePath: string): void {
     const analysis = this.analyzeModuleStructure(modulePath);
-    
+
     if (analysis.recommendations.length > 0) {
       this.logger.log(`Reorganizing module at ${modulePath}`);
-      
+
       // Apply recommendations
       for (const recommendation of analysis.recommendations) {
         this.logger.log(`Recommendation: ${recommendation}`);
       }
-      
+
       // This would implement actual reorganization logic
       this.logger.log('Module reorganization completed');
     } else {
@@ -649,7 +659,7 @@ describe('${moduleName}Controller', () => {
 
     for (const module of modules) {
       const analysis = this.analyzeModuleStructure(module.path);
-      
+
       if (analysis.recommendations.length === 0) {
         compliantModules++;
       } else {
@@ -675,17 +685,15 @@ describe('${moduleName}Controller', () => {
 
     try {
       const items = fs.readdirSync(basePath);
-      
+
       for (const item of items) {
         const itemPath = path.join(basePath, item);
         const stats = fs.statSync(itemPath);
-        
+
         if (stats.isDirectory() && !item.startsWith('.') && item !== 'common') {
           // Check if it contains a module file
-          const moduleFiles = fs.readdirSync(itemPath).filter(file => 
-            file.includes('.module.ts')
-          );
-          
+          const moduleFiles = fs.readdirSync(itemPath).filter(file => file.includes('.module.ts'));
+
           if (moduleFiles.length > 0) {
             modules.push({
               name: item,

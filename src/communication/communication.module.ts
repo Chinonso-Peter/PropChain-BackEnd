@@ -20,25 +20,23 @@ import { WorkflowService } from './automation/workflow.service';
 import { DeliverabilityService } from './deliverability/deliverability.service';
 
 @Module({
-  imports: [
-    ConfigModule,
-  ],
+  imports: [ConfigModule],
   providers: [
     // Email Services
     EmailTemplateService,
     EmailService,
     EmailAnalyticsService,
     EmailQueueService,
-    
+
     // Multi-channel Services
     MultichannelService,
-    
+
     // Preference Services
     PreferenceService,
-    
+
     // Automation Services
     WorkflowService,
-    
+
     // Deliverability Services
     DeliverabilityService,
   ],
@@ -51,16 +49,16 @@ import { DeliverabilityService } from './deliverability/deliverability.service';
     EmailService,
     EmailAnalyticsService,
     EmailQueueService,
-    
+
     // Multi-channel Services
     MultichannelService,
-    
+
     // Preference Services
     PreferenceService,
-    
+
     // Automation Services
     WorkflowService,
-    
+
     // Deliverability Services
     DeliverabilityService,
   ],

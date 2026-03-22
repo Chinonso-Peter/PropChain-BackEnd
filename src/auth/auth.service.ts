@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { UnauthorizedException, InvalidCredentialsException, TokenExpiredException, InvalidInputException, UserNotFoundException } from '../common/errors/custom.exceptions';
+import {
+  UnauthorizedException,
+  InvalidCredentialsException,
+  TokenExpiredException,
+  InvalidInputException,
+  UserNotFoundException,
+} from '../common/errors/custom.exceptions';
 import { UserService } from '../users/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -178,7 +184,6 @@ export class AuthService {
       }
     }
 
-
     // === REFRESH TOKEN REVOCATION ===
     // Prevents token refresh even if JWT signature is still valid
 
@@ -310,9 +315,9 @@ export class AuthService {
     // Enables per-token blacklisting even if JWT signature is still valid
     const jti = uuidv4();
     const payload = {
-      sub: user.id,      // Subject (user ID)
+      sub: user.id, // Subject (user ID)
       email: user.email,
-      jti: jti           // JWT ID for blacklisting
+      jti, // JWT ID for blacklisting
     };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -364,7 +369,7 @@ export class AuthService {
     // Import EmailService and send actual email
     const { EmailService } = await import('../communication/email/email.service');
     const emailService = new EmailService(this.configService, null, null, null);
-    
+
     await emailService.sendTemplatedEmail(email, 'email-verification', {
       firstName: email.split('@')[0], // Extract name from email for personalization
       verificationUrl: `${this.configService.get<string>('BASE_URL')}/auth/verify-email/${verificationToken}`,
@@ -378,7 +383,7 @@ export class AuthService {
     // Import EmailService and send actual email
     const { EmailService } = await import('../communication/email/email.service');
     const emailService = new EmailService(this.configService, null, null, null);
-    
+
     await emailService.sendTemplatedEmail(email, 'password-reset', {
       firstName: email.split('@')[0], // Extract name from email for personalization
       resetUrl: `${this.configService.get<string>('BASE_URL')}/auth/reset-password/${resetToken}`,

@@ -72,11 +72,7 @@ import { ObservabilityModule } from './observability/observability.module';
           watch: true,
         },
       }),
-      resolvers: [
-        { use: QueryResolver, options: ['lang'] },
-        AcceptLanguageResolver,
-        new HeaderResolver(['x-lang']),
-      ],
+      resolvers: [{ use: QueryResolver, options: ['lang'] }, AcceptLanguageResolver, new HeaderResolver(['x-lang'])],
       inject: [ConfigService],
     }),
 

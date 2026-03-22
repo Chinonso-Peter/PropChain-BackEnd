@@ -43,7 +43,7 @@ export class ConfigVersioningService {
   async createVersion(description: string, author?: string, tags?: string[]): Promise<ConfigVersion> {
     const currentConfig = this.getCurrentConfig();
     const hash = this.calculateConfigHash(currentConfig);
-    
+
     // Check if this configuration already exists
     const existingVersion = this.versions.find(v => v.hash === hash);
     if (existingVersion) {
@@ -101,7 +101,7 @@ export class ConfigVersioningService {
 
       // Apply the rollback configuration
       const result = await this.applyConfig(version.config);
-      
+
       if (result.success) {
         this.logger.log(`Successfully rolled back to version ${versionId}`);
         return {
@@ -116,7 +116,10 @@ export class ConfigVersioningService {
         };
       }
     } catch (error) {
-      this.logger.error(`Failed to rollback to version ${versionId}:`, error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `Failed to rollback to version ${versionId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -127,7 +130,10 @@ export class ConfigVersioningService {
   /**
    * Compare two configuration versions
    */
-  compareVersions(versionId1: string, versionId2: string): Array<{
+  compareVersions(
+    versionId1: string,
+    versionId2: string,
+  ): Array<{
     key: string;
     value1: string;
     value2: string;
@@ -173,7 +179,7 @@ export class ConfigVersioningService {
    */
   private getCurrentConfig(): Record<string, string> {
     const config: Record<string, string> = {};
-    
+
     // Get all environment variables
     for (const [key, value] of Object.entries(process.env)) {
       if (value && !key.startsWith('npm_') && !key.startsWith('NODE_')) {
@@ -226,7 +232,7 @@ export class ConfigVersioningService {
   private loadVersions(): void {
     try {
       const files = fs.readdirSync(this.versionsDir);
-      
+
       for (const file of files) {
         if (file.endsWith('.json')) {
           const filePath = path.join(this.versionsDir, file);
@@ -239,7 +245,10 @@ export class ConfigVersioningService {
 
       this.logger.log(`Loaded ${this.versions.length} configuration versions`);
     } catch (error) {
-      this.logger.warn('Failed to load configuration versions:', error instanceof Error ? error.message : String(error));
+      this.logger.warn(
+        'Failed to load configuration versions:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -302,7 +311,7 @@ export class ConfigVersioningService {
       try {
         const filePath = path.join(this.versionsDir, `${version.id}.json`);
         fs.unlinkSync(filePath);
-        
+
         // Remove from memory
         const index = this.versions.findIndex(v => v.id === version.id);
         if (index !== -1) {
@@ -311,7 +320,10 @@ export class ConfigVersioningService {
 
         this.logger.debug(`Deleted old configuration version ${version.id}`);
       } catch (error) {
-        this.logger.warn(`Failed to delete version ${version.id}:`, error instanceof Error ? error.message : String(error));
+        this.logger.warn(
+          `Failed to delete version ${version.id}:`,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
 
@@ -329,7 +341,7 @@ export class ConfigVersioningService {
 
     const content = JSON.stringify(exportData, null, 2);
     fs.writeFileSync(outputPath, content);
-    
+
     this.logger.log(`Exported ${this.versions.length} configuration versions to ${outputPath}`);
   }
 
@@ -346,7 +358,7 @@ export class ConfigVersioningService {
 
     for (const version of importData.versions) {
       version.timestamp = new Date(version.timestamp);
-      
+
       // Check if version already exists
       if (!this.versions.find(v => v.id === version.id)) {
         this.versions.push(version);

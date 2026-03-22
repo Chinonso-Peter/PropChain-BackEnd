@@ -7,7 +7,7 @@ import { EmailQueueService } from './email.queue';
 
 /**
  * Email Service
- * 
+ *
  * Handles email sending with multiple providers and advanced features
  */
 @Injectable()
@@ -35,11 +35,11 @@ export class EmailService {
     options?: EmailOptions,
   ): Promise<EmailSendResult> {
     const startTime = Date.now();
-    
+
     try {
       // Render template
       const renderedEmail = this.templateService.renderTemplate(templateName, data, options?.locale);
-      
+
       // Prepare email
       const emailData: EmailData = {
         to: Array.isArray(to) ? to : [to],
@@ -82,11 +82,13 @@ export class EmailService {
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       // Track failure
       await this.analyticsService.trackEmailSent({
+        emailId: `failed-${Date.now()}`,
         templateName,
         recipientCount: Array.isArray(to) ? to.length : 1,
+        provider: 'unknown',
         deliveryTime: Date.now() - startTime,
         success: false,
         error: errorMessage,
@@ -120,7 +122,7 @@ export class EmailService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       return {
         emailId,
         provider: provider.name,
@@ -135,20 +137,20 @@ export class EmailService {
   /**
    * Schedule email for later delivery
    */
-  async scheduleEmail(
-    emailData: EmailData,
-    scheduledFor: Date,
-    metadata?: EmailMetadata,
-  ): Promise<string> {
-    const jobId = await this.queueService.add('send-email', {
-      emailData,
-      scheduledFor,
-      metadata,
-    }, {
-      delay: scheduledFor.getTime() - Date.now(),
-      attempts: 3,
-      backoff: 'exponential',
-    });
+  async scheduleEmail(emailData: EmailData, scheduledFor: Date, metadata?: EmailMetadata): Promise<string> {
+    const jobId = await this.queueService.add(
+      'send-email',
+      {
+        emailData,
+        scheduledFor,
+        metadata,
+      },
+      {
+        delay: scheduledFor.getTime() - Date.now(),
+        attempts: 3,
+        backoff: 'exponential',
+      },
+    );
 
     this.logger.log(`Email scheduled for delivery`, {
       jobId,
@@ -161,10 +163,7 @@ export class EmailService {
   /**
    * Send batch emails
    */
-  async sendBatchEmails(
-    emails: BatchEmailData[],
-    options?: BatchEmailOptions,
-  ): Promise<BatchEmailResult> {
+  async sendBatchEmails(emails: BatchEmailData[], options?: BatchEmailOptions): Promise<BatchEmailResult> {
     const batchId = this.generateBatchId();
     const results: EmailSendResult[] = [];
     let successCount = 0;
@@ -177,7 +176,7 @@ export class EmailService {
         try {
           const result = await this.sendEmail(email.data, email.metadata);
           results.push(result);
-          
+
           if (result.status === 'sent') {
             successCount++;
           } else {
@@ -245,10 +244,10 @@ export class EmailService {
   ): Promise<EmailSendResult> {
     // Determine A/B test variant
     const variant = this.determineABTestVariant(options?.abTestVariant);
-    
+
     // Apply personalization rules
     const personalizedData = this.applyPersonalizationRules(baseData, personalizationRules);
-    
+
     // Get template variant if A/B testing
     let finalTemplate = templateName;
     if (variant && variant !== 'control') {
@@ -276,12 +275,12 @@ export class EmailService {
       },
     };
 
-    this.transporter = nodemailer.createTransporter(smtpConfig);
+    this.transporter = nodemailer.createTransport(smtpConfig);
 
     // Register providers
     this.providers.set('smtp', {
       name: 'smtp',
-      send: async (emailData) => {
+      send: async emailData => {
         const result = await this.transporter.sendMail(emailData);
         return { messageId: result.messageId };
       },
@@ -301,9 +300,9 @@ export class EmailService {
     if (this.configService.get<string>('SENDGRID_API_KEY')) {
       this.providers.set('sendgrid', {
         name: 'sendgrid',
-        send: async (emailData) => {
+        send: async emailData => {
           // SendGrid implementation would go here
-          return { messageId: 'sendgrid-' + Date.now() };
+          return { messageId: `sendgrid-${Date.now()}` };
         },
         isAvailable: async () => true,
         priority: 2,
@@ -314,9 +313,9 @@ export class EmailService {
     if (this.configService.get<string>('AWS_ACCESS_KEY_ID')) {
       this.providers.set('ses', {
         name: 'ses',
-        send: async (emailData) => {
+        send: async emailData => {
           // AWS SES implementation would go here
-          return { messageId: 'ses-' + Date.now() };
+          return { messageId: `ses-${Date.now()}` };
         },
         isAvailable: async () => true,
         priority: 3,
@@ -328,8 +327,7 @@ export class EmailService {
    * Select best available provider
    */
   private selectProvider(emailData: EmailData): EmailProvider {
-    const availableProviders = Array.from(this.providers.values())
-      .filter(provider => provider.priority);
+    const availableProviders = Array.from(this.providers.values()).filter(provider => provider.priority);
 
     // Sort by priority (lower number = higher priority)
     availableProviders.sort((a, b) => a.priority - b.priority);
@@ -341,13 +339,19 @@ export class EmailService {
    * Determine A/B test variant
    */
   private determineABTestVariant(forcedVariant?: 'A' | 'B' | 'control'): 'A' | 'B' | 'control' {
-    if (forcedVariant) return forcedVariant;
+    if (forcedVariant) {
+      return forcedVariant;
+    }
 
     const abTestPercentage = this.configService.get<number>('AB_TEST_PERCENTAGE', 10);
     const random = Math.random() * 100;
 
-    if (random < abTestPercentage / 2) return 'A';
-    if (random < abTestPercentage) return 'B';
+    if (random < abTestPercentage / 2) {
+      return 'A';
+    }
+    if (random < abTestPercentage) {
+      return 'B';
+    }
     return 'control';
   }
 
@@ -437,14 +441,14 @@ export class EmailService {
   async testConfiguration(): Promise<EmailTestResult> {
     try {
       const testEmail = {
-        to: this.configService.get<string>('EMAIL_TEST_TO'),
+        to: [this.configService.get<string>('EMAIL_TEST_TO')],
         subject: 'PropChain Email Test',
         html: '<h1>Email Configuration Test</h1><p>This is a test email from PropChain.</p>',
         text: 'Email Configuration Test\n\nThis is a test email from PropChain.',
       };
 
       const result = await this.sendEmail(testEmail);
-      
+
       return {
         success: result.status === 'sent',
         provider: result.provider,

@@ -7,7 +7,7 @@ import { PreferenceService } from '../preferences/preference.service';
 
 /**
  * Email Automation and Workflow Service
- * 
+ *
  * Handles automated email workflows and triggers
  */
 @Injectable()
@@ -31,7 +31,7 @@ export class WorkflowService {
    */
   async executeWorkflow(workflowId: string, context: WorkflowContext): Promise<WorkflowResult> {
     const workflow = this.workflows.get(workflowId);
-    
+
     if (!workflow) {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
@@ -92,6 +92,7 @@ export class WorkflowService {
         executionTime,
         error: errorMessage,
         steps: results,
+        context,
       };
     }
   }
@@ -106,13 +107,13 @@ export class WorkflowService {
     for (const trigger of applicableTriggers) {
       try {
         const shouldExecute = await this.evaluateTriggerCondition(trigger, event);
-        
+
         if (shouldExecute) {
           // Build workflow context
           const context: WorkflowContext = {
             userId: event.userId,
             trigger: trigger.id,
-            event: event,
+            event,
             data: { ...event.data, ...trigger.context },
           };
 
@@ -134,7 +135,7 @@ export class WorkflowService {
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        
+
         results.push({
           triggerId: trigger.id,
           workflowId: trigger.workflowId,
@@ -182,7 +183,7 @@ export class WorkflowService {
    */
   async updateWorkflow(workflowId: string, updates: Partial<Workflow>): Promise<Workflow> {
     const existing = this.workflows.get(workflowId);
-    
+
     if (!existing) {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
@@ -209,7 +210,7 @@ export class WorkflowService {
    */
   async deleteWorkflow(workflowId: string): Promise<void> {
     const deleted = this.workflows.delete(workflowId);
-    
+
     if (deleted) {
       this.logger.log(`Deleted workflow: ${workflowId}`);
     } else {
@@ -235,12 +236,12 @@ export class WorkflowService {
       if (filters.enabled !== undefined) {
         workflows = workflows.filter(w => w.enabled === filters.enabled);
       }
-      
+
       if (filters.name) {
         const nameFilter = filters.name.toLowerCase();
         workflows = workflows.filter(w => w.name.toLowerCase().includes(nameFilter));
       }
-      
+
       if (filters.category) {
         workflows = workflows.filter(w => w.category === filters.category);
       }
@@ -252,11 +253,7 @@ export class WorkflowService {
   /**
    * Get workflow execution history
    */
-  async getWorkflowHistory(
-    workflowId?: string,
-    userId?: string,
-    timeRange?: TimeRange,
-  ): Promise<WorkflowExecution[]> {
+  async getWorkflowHistory(workflowId?: string, userId?: string, timeRange?: TimeRange): Promise<WorkflowExecution[]> {
     // This would query database
     // For now, return mock data
     return [
@@ -270,8 +267,10 @@ export class WorkflowService {
         steps: [
           {
             stepId: 'send_welcome_email',
+            type: 'email',
             success: true,
             executionTime: 1200,
+            context: {},
           },
         ],
         executedAt: new Date(),
@@ -296,31 +295,31 @@ export class WorkflowService {
         case 'send_email':
           result = await this.executeEmailStep(step, context);
           break;
-          
+
         case 'send_sms':
           result = await this.executeSMSStep(step, context);
           break;
-          
+
         case 'send_push':
           result = await this.executePushStep(step, context);
           break;
-          
+
         case 'delay':
           result = await this.executeDelayStep(step, context);
           break;
-          
+
         case 'condition':
           result = await this.executeConditionStep(step, context);
           break;
-          
+
         case 'webhook':
           result = await this.executeWebhookStep(step, context);
           break;
-          
+
         case 'script':
           result = await this.executeScriptStep(step, context);
           break;
-          
+
         default:
           throw new Error(`Unknown step type: ${step.type}`);
       }
@@ -355,7 +354,7 @@ export class WorkflowService {
    */
   private async executeEmailStep(step: WorkflowStep, context: WorkflowContext): Promise<any> {
     const templateData = this.resolveTemplateData(step.config.templateData, context);
-    
+
     const result = await this.emailService.sendTemplatedEmail(
       step.config.to || context.userId,
       step.config.templateName,
@@ -363,7 +362,7 @@ export class WorkflowService {
       {
         priority: step.config.priority,
         attachments: step.config.attachments,
-      }
+      },
     );
 
     return {
@@ -378,14 +377,10 @@ export class WorkflowService {
    */
   private async executeSMSStep(step: WorkflowStep, context: WorkflowContext): Promise<any> {
     const message = this.resolveTemplateData(step.config.message, context);
-    
-    const result = await this.multichannelService.sendSMS(
-      step.config.to || context.userId,
-      message,
-      {
-        priority: step.config.priority,
-      }
-    );
+
+    const result = await this.multichannelService.sendSMS(step.config.to || context.userId, message, {
+      priority: step.config.priority,
+    });
 
     return {
       messageId: result.messageId,
@@ -399,14 +394,10 @@ export class WorkflowService {
    */
   private async executePushStep(step: WorkflowStep, context: WorkflowContext): Promise<any> {
     const notification = this.resolveTemplateData(step.config.notification, context);
-    
-    const result = await this.multichannelService.sendPushNotification(
-      context.userId,
-      notification,
-      {
-        priority: step.config.priority,
-      }
-    );
+
+    const result = await this.multichannelService.sendPushNotification(context.userId, notification, {
+      priority: step.config.priority,
+    });
 
     return {
       messageId: result.messageId,
@@ -448,16 +439,12 @@ export class WorkflowService {
    */
   private async executeWebhookStep(step: WorkflowStep, context: WorkflowContext): Promise<any> {
     const payload = this.resolveTemplateData(step.config.payload, context);
-    
-    const result = await this.multichannelService.sendWebhook(
-      step.config.url,
-      payload,
-      {
-        method: step.config.method,
-        headers: step.config.headers,
-        timeout: step.config.timeout,
-      }
-    );
+
+    const result = await this.multichannelService.sendWebhook(step.config.url, payload, {
+      method: step.config.method,
+      headers: step.config.headers,
+      timeout: step.config.timeout,
+    });
 
     return {
       url: step.config.url,
@@ -471,7 +458,7 @@ export class WorkflowService {
    */
   private async executeScriptStep(step: WorkflowStep, context: WorkflowContext): Promise<any> {
     const script = this.resolveTemplateData(step.config.script, context);
-    
+
     // In production, this would execute in a sandboxed environment
     // For now, simulate script execution
     this.logger.log(`Executing script`, {
@@ -501,8 +488,10 @@ export class WorkflowService {
       .flat()
       .filter(trigger => {
         // Check if trigger matches event type
-        if (trigger.event !== event.type) return false;
-        
+        if (trigger.event !== event.type) {
+          return false;
+        }
+
         // Check if trigger conditions are met
         return this.evaluateTriggerConditions(trigger.conditions, event);
       });
@@ -529,9 +518,10 @@ export class WorkflowService {
    * Evaluate trigger conditions
    */
   private evaluateTriggerConditions(conditions: TriggerCondition[], event: WorkflowEvent): boolean {
-    return conditions.every(condition => 
-      this.evaluateCondition(condition, { event, user: { id: event.userId } })
-    );
+    return conditions.every(condition => {
+      const conditionString = `${condition.field} ${condition.operator} ${JSON.stringify(condition.value)}`;
+      return this.evaluateCondition(conditionString, { event, user: { id: event.userId } });
+    });
   }
 
   /**
@@ -575,22 +565,20 @@ export class WorkflowService {
    */
   private parseDuration(duration: string): number {
     const match = duration.match(/^(\d+)([smhd])$/);
-    if (!match) return 0;
+    if (!match) {
+      return 0;
+    }
 
     const [, amount, unit] = match;
     const multipliers = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
-    
+
     return parseInt(amount) * (multipliers[unit] || 1000);
   }
 
   /**
    * Log workflow execution
    */
-  private async logWorkflowExecution(
-    workflowId: string,
-    userId: string,
-    result: any,
-  ): Promise<void> {
+  private async logWorkflowExecution(workflowId: string, userId: string, result: any): Promise<void> {
     // This would log to database
     this.logger.log(`Workflow execution logged`, {
       workflowId,
@@ -758,7 +746,7 @@ export class WorkflowService {
   @Cron(CronExpression.EVERY_HOUR)
   async scheduledWorkflowExecution(): Promise<void> {
     this.logger.log('Running scheduled workflow execution');
-    
+
     // This would check for scheduled workflows and execute them
     // For now, just log
   }

@@ -7,13 +7,7 @@ import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { PrismaService } from '../database/prisma/prisma.service';
-import {
-  DisasterRecoveryPlan,
-  RecoveryTestResult,
-  RecoveryPoint,
-  RTO,
-  PointInTimeRecovery,
-} from './backup.types';
+import { DisasterRecoveryPlan, RecoveryTestResult, RecoveryPoint, RTO, PointInTimeRecovery } from './backup.types';
 
 const execAsync = promisify(exec);
 
@@ -99,7 +93,10 @@ export class DisasterRecoveryService {
   /**
    * Trigger manual failover to specific region
    */
-  async initiateManagedFailover(planId: string, targetRegion: string): Promise<{
+  async initiateManagedFailover(
+    planId: string,
+    targetRegion: string,
+  ): Promise<{
     status: string;
     failoverStartTime: Date;
     estimatedCompletionTime: Date;
@@ -366,7 +363,7 @@ export class DisasterRecoveryService {
         // Continue waiting
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10 seconds
+      await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
     }
 
     throw new Error('Database promotion timeout');
@@ -458,7 +455,7 @@ export class DisasterRecoveryService {
         }
 
         retries++;
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       }
 
       throw new Error('Failover region failed health checks');
@@ -485,10 +482,7 @@ export class DisasterRecoveryService {
   /**
    * Create recovery snapshot
    */
-  private async createRecoverySnapshot(
-    backupId: string,
-    targetTimestamp: Date,
-  ): Promise<string> {
+  private async createRecoverySnapshot(backupId: string, targetTimestamp: Date): Promise<string> {
     this.logger.log(`Creating recovery snapshot for backup ${backupId}`);
 
     const snapshotPath = path.join(this.backupDir, `recovery_${backupId}_${Date.now()}.snapshot`);
@@ -518,10 +512,9 @@ export class DisasterRecoveryService {
     const { host, port, user, password, database } = this.parseDatabaseUrl(databaseUrl);
 
     try {
-      await execAsync(
-        `pg_restore -h ${host} -p ${port} -U ${user} -d ${database} -v ${snapshotPath}`,
-        { env: { ...process.env, PGPASSWORD: password } },
-      );
+      await execAsync(`pg_restore -h ${host} -p ${port} -U ${user} -d ${database} -v ${snapshotPath}`, {
+        env: { ...process.env, PGPASSWORD: password },
+      });
 
       this.logger.log(`Database restored successfully for environment: ${environment}`);
     } catch (error) {
@@ -627,11 +620,7 @@ export class DisasterRecoveryService {
   /**
    * Notify failover failure
    */
-  private async notifyFailoverFailure(
-    plan: DisasterRecoveryPlan,
-    region: string,
-    error: Error,
-  ): Promise<void> {
+  private async notifyFailoverFailure(plan: DisasterRecoveryPlan, region: string, error: Error): Promise<void> {
     const message = `Failover failed: ${plan.name} -> ${region}: ${error.message}`;
     this.logger.error(message);
 
@@ -652,8 +641,7 @@ export class DisasterRecoveryService {
    * Parse database URL
    */
   private parseDatabaseUrl(url: string) {
-    const regex =
-      /postgresql:\/\/(.*?):(.*?)@(.*?):(\d+)\/(.*?)(\?|$)/;
+    const regex = /postgresql:\/\/(.*?):(.*?)@(.*?):(\d+)\/(.*?)(\?|$)/;
     const match = url.match(regex);
 
     if (!match) {
@@ -678,10 +666,7 @@ export class DisasterRecoveryService {
       fsSync.mkdirSync(plansDir, { recursive: true });
     }
 
-    await fs.writeFile(
-      path.join(plansDir, `${plan.id}.json`),
-      JSON.stringify(plan, null, 2),
-    );
+    await fs.writeFile(path.join(plansDir, `${plan.id}.json`), JSON.stringify(plan, null, 2));
   }
 
   /**
@@ -693,10 +678,7 @@ export class DisasterRecoveryService {
       fsSync.mkdirSync(resultsDir, { recursive: true });
     }
 
-    await fs.writeFile(
-      path.join(resultsDir, `${result.id}.json`),
-      JSON.stringify(result, null, 2),
-    );
+    await fs.writeFile(path.join(resultsDir, `${result.id}.json`), JSON.stringify(result, null, 2));
   }
 
   /**
