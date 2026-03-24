@@ -23,9 +23,10 @@ export class User implements PrismaUser {
   avatarUrl: string | null;
 
   // Preferences and privacy
-  preferences?: any | null;
-  privacySettings?: any | null;
-  exportRequestedAt?: Date | null;
+  preferences: any | null;
+  privacySettings: any | null;
+  exportRequestedAt: Date | null;
+
 
   // Relationships
   followers?: any[];

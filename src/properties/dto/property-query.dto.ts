@@ -135,4 +135,8 @@ export class PropertyFilterDto {
   maxArea?: number;
 }
 
-export class PropertyQueryDto extends IntersectionType(PropertyFilterDto, IntersectionType(PaginationDto, SortDto)) {}
+class PropertyPaginationSortDto extends IntersectionType(PaginationDto, SortDto) {}
+
+export class PropertyQueryDto extends IntersectionType(PropertyFilterDto, PropertyPaginationSortDto) {}
+export interface PropertyQueryDto extends PropertyFilterDto, PaginationDto, SortDto {}
+

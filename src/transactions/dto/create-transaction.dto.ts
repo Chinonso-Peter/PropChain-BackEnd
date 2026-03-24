@@ -3,9 +3,13 @@ export class CreateTransactionDto {
   toAddress: string;
   amount: number;
   type: string;
+  buyerId: string;
+  sellerId: string;
+  currency: string;
   propertyId?: string;
   txHash?: string;
 }
+
 
 export class PaginationParams {
   page?: number;
