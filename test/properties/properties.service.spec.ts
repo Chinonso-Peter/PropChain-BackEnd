@@ -198,6 +198,7 @@ describe('PropertiesService', () => {
         limit: 10,
         totalPages: 1,
       });
+      expect(mockCacheService.wrap).toHaveBeenCalled();
     });
 
     it('should apply search filter correctly', async () => {
@@ -415,6 +416,7 @@ describe('PropertiesService', () => {
       expect(result).toEqual(mockProperty);
       expect(mockPrismaService.property.findUnique).toHaveBeenCalledWith({
         where: { id: 'prop_123' },
+        relationLoadStrategy: 'join',
         include: {
           owner: {
             select: {
@@ -471,6 +473,7 @@ describe('PropertiesService', () => {
           title: 'Updated Property',
           price: 600000,
         },
+        relationLoadStrategy: 'join',
         include: {
           owner: {
             select: {
