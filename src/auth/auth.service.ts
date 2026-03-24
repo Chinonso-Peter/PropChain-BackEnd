@@ -14,8 +14,9 @@ import * as bcrypt from 'bcrypt';
 import { RedisService } from '../common/services/redis.service';
 import { v4 as uuidv4 } from 'uuid';
 import { StructuredLoggerService } from '../common/logging/logger.service';
-import { JwtPayload } from './auth.types';
+import { JwtPayload, SessionInfo } from './auth.types';
 import { JWT_TOKEN_USE, tokenRevocationRedisKeys } from './constants';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -46,7 +47,10 @@ export class AuthService {
     }
   }
 
-  async login(credentials: { email?: string; password?: string; walletAddress?: string; signature?: string }) {
+  async login(
+    credentials: { email?: string; password?: string; walletAddress?: string; signature?: string },
+    requestMeta?: { ip?: string; userAgent?: string },
+  ) {
     let user: any;
 
     // brute force protection
@@ -90,7 +94,7 @@ export class AuthService {
       }
 
       this.logger.logAuth('User login successful', { userId: user.id });
-      return this.generateTokens(user);
+      return this.generateTokens(user, requestMeta);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error('User login failed', errorMessage, {
@@ -136,7 +140,7 @@ export class AuthService {
     return result;
   }
 
-  async refreshToken(refreshToken: string) {
+  async refreshToken(refreshToken: string, requestMeta?: { ip?: string; userAgent?: string }) {
     try {
       const payload = (await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
@@ -155,16 +159,35 @@ export class AuthService {
         throw new UserNotFoundException(payload.sub);
       }
 
-      const boundUserId = await this.redisService.get(tokenRevocationRedisKeys.refreshSession(payload.rid));
+      const refreshSessionData = await this.redisService.get(tokenRevocationRedisKeys.refreshSession(payload.rid));
+      if (!refreshSessionData) {
+        this.logger.warn('Refresh token validation failed: missing refresh session', { userId: payload.sub });
+        throw new TokenExpiredException('Invalid refresh token');
+      }
+
+      const refreshSession = JSON.parse(refreshSessionData) as {
+        userId: string;
+        sessionId: string;
+        fingerprint: string;
+      };
       const currentRid = await this.redisService.get(tokenRevocationRedisKeys.userRefreshSession(payload.sub));
 
-      if (boundUserId !== payload.sub || currentRid !== payload.rid) {
+      if (refreshSession.userId !== payload.sub || currentRid !== payload.rid) {
         this.logger.warn('Refresh token validation failed: revoked or rotated', { userId: payload.sub });
         throw new TokenExpiredException('Invalid refresh token');
       }
 
+      const existingSession = await this.getSessionById(payload.sub, refreshSession.sessionId);
+      if (!existingSession) {
+        this.logger.warn('Refresh token validation failed: session missing', { userId: payload.sub });
+        throw new TokenExpiredException('Invalid refresh token');
+      }
+
+      this.assertFingerprintMatches(existingSession, requestMeta);
+      await this.invalidateSession(payload.sub, refreshSession.sessionId);
+
       this.logger.logAuth('Token refreshed successfully', { userId: user.id });
-      return this.generateTokens(user);
+      return this.generateTokens(user, requestMeta);
     } catch (error) {
       const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error('Token refresh failed', stack);
@@ -192,7 +215,14 @@ export class AuthService {
     // === REFRESH TOKEN REVOCATION ===
     // Prevents token refresh even if JWT signature is still valid
 
-    await this.clearRefreshSessionForUser(userId);
+    if (accessToken) {
+      const tokenPayload = this.jwtService.decode(accessToken) as JwtPayload | null;
+      if (tokenPayload?.sid) {
+        await this.invalidateSession(userId, tokenPayload.sid);
+      }
+    } else {
+      await this.clearRefreshSessionForUser(userId);
+    }
     this.logger.logAuth('User logged out successfully', { userId });
     return { message: 'Logged out successfully' };
   }
@@ -280,8 +310,8 @@ export class AuthService {
     return sessions;
   }
 
-  async getSessionById(userId: string, sessionId: string): Promise<any> {
-    const sessionData = await this.redisService.get(`active_session:${userId}:${sessionId}`);
+  async getSessionById(userId: string, sessionId: string): Promise<SessionInfo | null> {
+    const sessionData = await this.redisService.get(tokenRevocationRedisKeys.activeSession(userId, sessionId));
     return sessionData ? JSON.parse(sessionData) : null;
   }
 
@@ -290,13 +320,19 @@ export class AuthService {
     return sessions.map(session => ({
       ...session,
       isActive: true,
-      expiresIn: this.getSessionExpiry(session.createdAt),
+      expiresIn: this.getSessionExpiry(session.lastActivity || session.createdAt),
     }));
   }
 
   async invalidateAllSessions(userId: string): Promise<void> {
     const sessionKeys = await this.redisService.keys(`active_session:${userId}:*`);
     for (const key of sessionKeys) {
+      const sessionData = await this.redisService.get(key);
+      if (sessionData) {
+        const session = JSON.parse(sessionData) as SessionInfo;
+        await this.redisService.del(tokenRevocationRedisKeys.accessSession(session.jti));
+        await this.redisService.del(tokenRevocationRedisKeys.refreshSession(session.refreshSessionId));
+      }
       await this.redisService.del(key);
     }
     await this.clearRefreshSessionForUser(userId);
@@ -316,8 +352,59 @@ export class AuthService {
   }
 
   async invalidateSession(userId: string, sessionId: string): Promise<void> {
-    await this.redisService.del(`active_session:${userId}:${sessionId}`);
+    const session = await this.getSessionById(userId, sessionId);
+    if (session) {
+      await this.redisService.del(tokenRevocationRedisKeys.accessSession(session.jti));
+      await this.redisService.del(tokenRevocationRedisKeys.refreshSession(session.refreshSessionId));
+      const ttl = this.getSessionExpiry(session.lastActivity || session.createdAt);
+      if (ttl > 0) {
+        await this.redisService.setex(tokenRevocationRedisKeys.accessRevoked(session.jti), Math.ceil(ttl / 1000), userId);
+      }
+    }
+    await this.redisService.del(tokenRevocationRedisKeys.activeSession(userId, sessionId));
     this.logger.logAuth('Session invalidated', { userId, sessionId });
+  }
+
+  async validateActiveSession(
+    userId: string,
+    jti: string,
+    sessionId: string,
+    requestMeta?: { ip?: string; userAgent?: string },
+  ): Promise<SessionInfo> {
+    const mappedSessionId = await this.redisService.get(tokenRevocationRedisKeys.accessSession(jti));
+    if (!mappedSessionId || mappedSessionId !== sessionId) {
+      throw new UnauthorizedException('Session is no longer active');
+    }
+
+    const session = await this.getSessionById(userId, sessionId);
+    if (!session || session.jti !== jti) {
+      throw new UnauthorizedException('Session is no longer active');
+    }
+
+    const absoluteExpiry = session.absoluteExpiresAt ? new Date(session.absoluteExpiresAt).getTime() : 0;
+    if (absoluteExpiry && absoluteExpiry <= Date.now()) {
+      await this.invalidateSession(userId, sessionId);
+      throw new UnauthorizedException('Session has expired');
+    }
+
+    this.assertFingerprintMatches(session, requestMeta);
+
+    const idleTimeoutSeconds = this.configService.get<number>('SESSION_TIMEOUT', 3600);
+    const lastActivity = new Date(session.lastActivity || session.createdAt).getTime();
+    if (Date.now() - lastActivity > idleTimeoutSeconds * 1000) {
+      await this.invalidateSession(userId, sessionId);
+      throw new UnauthorizedException('Session has expired');
+    }
+
+    const updatedSession: SessionInfo = {
+      ...session,
+      lastActivity: new Date().toISOString(),
+      ip: requestMeta?.ip || session.ip,
+      userAgent: requestMeta?.userAgent || session.userAgent,
+    };
+
+    await this.persistSession(updatedSession);
+    return updatedSession;
   }
 
   private async clearRefreshSessionForUser(userId: string): Promise<void> {
@@ -336,22 +423,25 @@ export class AuthService {
     return Math.max(0, decoded.exp - Math.floor(Date.now() / 1000));
   }
 
-  private async generateTokens(user: any) {
+  private async generateTokens(user: any, requestMeta?: { ip?: string; userAgent?: string }) {
     await this.clearRefreshSessionForUser(user.id);
 
     const jti = uuidv4();
+    const sessionId = uuidv4();
     const refreshSessionId = uuidv4();
 
     const accessPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
       jti,
+      sid: sessionId,
       tokenUse: JWT_TOKEN_USE.ACCESS,
     };
 
     const refreshPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
+      sid: sessionId,
       rid: refreshSessionId,
       tokenUse: JWT_TOKEN_USE.REFRESH,
     };
@@ -370,10 +460,15 @@ export class AuthService {
     if (refreshTtl <= 0) {
       refreshTtl = 7 * 24 * 60 * 60;
     }
+    const sessionMeta = this.buildSessionInfo(user.id, sessionId, jti, refreshSessionId, requestMeta);
     await this.redisService.setex(
       tokenRevocationRedisKeys.refreshSession(refreshSessionId),
       refreshTtl,
-      user.id,
+      JSON.stringify({
+        userId: user.id,
+        sessionId,
+        fingerprint: sessionMeta.fingerprint,
+      }),
     );
     await this.redisService.setex(
       tokenRevocationRedisKeys.userRefreshSession(user.id),
@@ -382,18 +477,10 @@ export class AuthService {
     );
 
     const sessionExpiry = this.configService.get<number>('SESSION_TIMEOUT', 3600);
-    await this.redisService.setex(
-      `active_session:${user.id}:${jti}`,
-      sessionExpiry,
-      JSON.stringify({
-        userId: user.id,
-        createdAt: new Date().toISOString(),
-        userAgent: 'unknown',
-        ip: 'unknown',
-      }),
-    );
+    await this.redisService.setex(tokenRevocationRedisKeys.accessSession(jti), sessionExpiry, sessionId);
+    await this.persistSession(sessionMeta);
 
-    this.logger.debug('Generated new tokens for user', { userId: user.id, jti, refreshSessionId });
+    this.logger.debug('Generated new tokens for user', { userId: user.id, jti, refreshSessionId, sessionId });
 
     return {
       access_token: accessToken,
@@ -439,5 +526,55 @@ export class AuthService {
 
     this.logger.log(`Password reset email sent to ${email}`);
     this.logger.debug(`Password reset token generated for ${email}`);
+  }
+
+  private buildSessionInfo(
+    userId: string,
+    sessionId: string,
+    jti: string,
+    refreshSessionId: string,
+    requestMeta?: { ip?: string; userAgent?: string },
+  ): SessionInfo {
+    const now = new Date();
+    const absoluteLifetimeSeconds = this.configService.get<number>('SESSION_ABSOLUTE_TIMEOUT', 86400);
+
+    return {
+      sessionId,
+      userId,
+      jti,
+      refreshSessionId,
+      createdAt: now.toISOString(),
+      lastActivity: now.toISOString(),
+      userAgent: requestMeta?.userAgent || 'unknown',
+      ip: requestMeta?.ip || 'unknown',
+      absoluteExpiresAt: new Date(now.getTime() + absoluteLifetimeSeconds * 1000).toISOString(),
+      fingerprint: this.buildFingerprint(requestMeta),
+    };
+  }
+
+  private async persistSession(session: SessionInfo): Promise<void> {
+    const sessionExpiry = this.configService.get<number>('SESSION_TIMEOUT', 3600);
+    await this.redisService.setex(
+      tokenRevocationRedisKeys.activeSession(session.userId, session.sessionId),
+      sessionExpiry,
+      JSON.stringify(session),
+    );
+    await this.redisService.setex(tokenRevocationRedisKeys.accessSession(session.jti), sessionExpiry, session.sessionId);
+  }
+
+  private buildFingerprint(requestMeta?: { ip?: string; userAgent?: string }): string {
+    const source = `${requestMeta?.ip || 'unknown'}|${requestMeta?.userAgent || 'unknown'}`;
+    return createHash('sha256').update(source).digest('hex');
+  }
+
+  private assertFingerprintMatches(session: SessionInfo, requestMeta?: { ip?: string; userAgent?: string }): void {
+    if (!session.fingerprint) {
+      return;
+    }
+
+    const requestFingerprint = this.buildFingerprint(requestMeta);
+    if (requestFingerprint !== session.fingerprint) {
+      throw new UnauthorizedException('Session validation failed');
+    }
   }
 }

@@ -105,7 +105,7 @@ export class AuthController {
     return this.authService.login({
       email: loginDto.email,
       password: loginDto.password,
-    });
+    }, this.getRequestMeta(req));
   }
 
   /**
@@ -136,11 +136,11 @@ export class AuthController {
   })
   @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
-  async web3Login(@Body() loginDto: LoginWeb3Dto) {
+  async web3Login(@Body() loginDto: LoginWeb3Dto, @Req() req: Request) {
     return this.authService.login({
       walletAddress: loginDto.walletAddress,
       signature: loginDto.signature,
-    });
+    }, this.getRequestMeta(req));
   }
 
   /**
@@ -179,8 +179,8 @@ export class AuthController {
   })
   @ApiStandardErrorResponse([401])
   @HttpCode(HttpStatus.OK)
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken, this.getRequestMeta(req));
   }
 
   /**
@@ -432,5 +432,17 @@ export class AuthController {
     const user = req['user'] as any;
     await this.authService.invalidateAllSessions(user.id);
     return { message: 'All sessions invalidated successfully' };
+  }
+
+  private getRequestMeta(req: Request): { ip: string; userAgent: string } {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ip = Array.isArray(forwardedFor)
+      ? forwardedFor[0]
+      : forwardedFor?.toString().split(',')[0]?.trim() || req.ip || req.socket.remoteAddress || 'unknown';
+
+    return {
+      ip,
+      userAgent: req.headers['user-agent'] || 'unknown',
+    };
   }
 }
