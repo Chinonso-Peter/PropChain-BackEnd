@@ -192,7 +192,9 @@ export class ConfigurationService {
 
   // Security
   get bcryptRounds(): number {
-    return this.configService.get<number>('BCRYPT_ROUNDS');
+    const rounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+    // Enforce minimum of 12 rounds for security
+    return Math.max(rounds, 12);
   }
 
   get sessionSecret(): string {

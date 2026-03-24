@@ -42,6 +42,9 @@ model User {
   // Activity
   activities    UserActivity[]
 
+  // Password history for rotation policy
+  passwordHistory PasswordHistory[]
+
   properties           Property[]
   receivedTransactions Transaction[] @relation("UserTransactions")
   userRole             Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
@@ -389,4 +392,17 @@ model ApiKey {
   @@index([isActive])
   @@index([createdAt])
   @@map("api_keys")
+}
+
+model PasswordHistory {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("password_history")
 }

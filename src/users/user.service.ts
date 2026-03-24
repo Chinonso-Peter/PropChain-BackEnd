@@ -9,6 +9,8 @@ import { PrismaService } from '../database/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { PasswordValidator } from '../common/validators/password.validator';
+import { PasswordRotationService } from '../common/services/password-rotation.service';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * UserService
@@ -31,6 +33,8 @@ export class UserService {
   constructor(
     private prisma: PrismaService,
     private readonly passwordValidator: PasswordValidator,
+    private readonly passwordRotationService: PasswordRotationService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -88,10 +92,11 @@ export class UserService {
 
     // === PASSWORD HASHING ===
     // Uses bcrypt for secure password hashing
-    // Salt rounds configurable via BCRYPT_ROUNDS (default: 12)
+    // Salt rounds configurable via BCRYPT_ROUNDS (default: 12, minimum: 12)
     // Higher = more secure but slower
-    const bcryptRounds = this.passwordValidator['configService'].get<number>('BCRYPT_ROUNDS', 12);
-    const hashedPassword = await bcrypt.hash(password, bcryptRounds);
+    const bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+    const effectiveRounds = Math.max(bcryptRounds, 12); // Enforce minimum 12 rounds
+    const hashedPassword = await bcrypt.hash(password, effectiveRounds);
 
     // Create user with hashed password
     const user = await this.prisma.user.create({
@@ -102,6 +107,10 @@ export class UserService {
         role: 'USER', // Default role
       },
     });
+
+    // === PASSWORD HISTORY TRACKING ===
+    // Add initial password to history for rotation policy enforcement
+    await this.passwordRotationService.addPasswordToHistory(user.id, hashedPassword);
 
     return user;
   }
@@ -192,14 +201,30 @@ export class UserService {
       throw new BadRequestException(`Password validation failed: ${passwordValidation.errors.join(', ')}`);
     }
 
+    // === PASSWORD ROTATION POLICY CHECK ===
+    // Validate password rotation requirements (history check)
+    const rotationCheck = await this.passwordRotationService.validatePasswordRotation(userId, newPassword);
+    if (!rotationCheck.valid) {
+      throw new BadRequestException(`Password rotation failed: ${rotationCheck.reason}`);
+    }
+
     // === BCRYPT HASHING ===
-    // Hash new password before storing
-    const bcryptRounds = this.passwordValidator['configService'].get<number>('BCRYPT_ROUNDS', 12);
-    const hashedPassword = await bcrypt.hash(newPassword, bcryptRounds);
-    return this.prisma.user.update({
+    // Hash new password before storing with minimum 12 rounds
+    const bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+    const effectiveRounds = Math.max(bcryptRounds, 12); // Enforce minimum 12 rounds
+    const hashedPassword = await bcrypt.hash(newPassword, effectiveRounds);
+
+    // Update user password
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: { password: hashedPassword },
     });
+
+    // === PASSWORD HISTORY TRACKING ===
+    // Add new password to history for rotation policy enforcement
+    await this.passwordRotationService.addPasswordToHistory(userId, hashedPassword);
+
+    return updatedUser;
   }
 
   /**

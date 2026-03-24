@@ -4,6 +4,7 @@ import { UserController } from './user.controller';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { AuthModule } from '../auth/auth.module';
 import { PasswordValidator } from '../common/validators/password.validator';
+import { PasswordRotationService } from '../common/services/password-rotation.service';
 
 @Module({
   imports: [
@@ -11,7 +12,7 @@ import { PasswordValidator } from '../common/validators/password.validator';
     forwardRef(() => AuthModule),
   ],
   controllers: [UserController],
-  providers: [UserService, PrismaService, PasswordValidator],
-  exports: [UserService], // This allows AuthService to use UserService
+  providers: [UserService, PrismaService, PasswordValidator, PasswordRotationService],
+  exports: [UserService, PasswordRotationService], // Export for use in other modules
 })
 export class UsersModule {}
