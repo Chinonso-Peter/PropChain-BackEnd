@@ -13,6 +13,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiHeader, ApiConsumes } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { getMultipleFileUploadOptions, getSingleFileUploadOptions } from '../security/config/multer.config';
+import { SecureFileValidator } from '../security/validators/secure-file.validator';
 import { DocumentAccessContext, DocumentMetadataInput, DocumentSearchFilters } from './document.model';
 import { DocumentService } from './document.service';
 import {
@@ -27,10 +30,14 @@ import {
 @ApiTags('documents')
 @Controller('documents')
 export class DocumentController {
-  constructor(private readonly documentService: DocumentService) {}
+  constructor(
+    private readonly documentService: DocumentService,
+    private readonly secureFileValidator: SecureFileValidator,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('upload')
-  @UseInterceptors(FilesInterceptor('files'))
+  @UseInterceptors(FilesInterceptor('files', undefined, getMultipleFileUploadOptions(this.configService)))
   @ApiOperation({ summary: 'Upload documents with metadata' })
   @ApiConsumes('multipart/form-data')
   @ApiHeader({ name: 'x-user-id', description: 'User ID', required: true })
@@ -43,13 +50,18 @@ export class DocumentController {
     @Headers('x-user-id') userId: string,
     @Headers('x-user-roles') rolesHeader?: string,
   ) {
+    // Validate each file with comprehensive security checks
+    for (const file of files) {
+      await this.secureFileValidator.validate(file);
+    }
+    
     const context = this.buildAccessContext(userId, rolesHeader);
     const metadata = this.parseMetadataInput(body);
     return this.documentService.uploadDocuments(files, metadata, context);
   }
 
   @Post(':id/version')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', undefined, getSingleFileUploadOptions(this.configService)))
   @ApiOperation({ summary: 'Add a new version to existing document' })
   @ApiConsumes('multipart/form-data')
   @ApiParam({ name: 'id', description: 'Document ID' })
@@ -63,6 +75,9 @@ export class DocumentController {
     @Headers('x-user-id') userId: string,
     @Headers('x-user-roles') rolesHeader?: string,
   ) {
+    // Validate file with comprehensive security checks
+    await this.secureFileValidator.validate(file);
+    
     const context = this.buildAccessContext(userId, rolesHeader);
     return this.documentService.addDocumentVersion(documentId, file, context);
   }

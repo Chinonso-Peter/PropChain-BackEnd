@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import storageConfig from '../config/storage.config';
 import { DocumentController } from './document.controller';
 import {
@@ -9,12 +10,18 @@ import {
   STORAGE_PROVIDER,
 } from './document.service';
 import { FileStorageService } from './storage/file-storage.service';
+import { SecureFileValidator } from '../security/validators/secure-file.validator';
+import { FileValidationService } from '../security/services/file-validation.service';
+import { MalwareScannerService } from '../security/services/malware-scanner.service';
 
 @Module({
   controllers: [DocumentController],
   providers: [
     DocumentService,
     FileStorageService,
+    SecureFileValidator,
+    FileValidationService,
+    MalwareScannerService,
     {
       provide: STORAGE_CONFIG,
       useFactory: storageConfig,
@@ -30,5 +37,6 @@ import { FileStorageService } from './storage/file-storage.service';
       inject: [STORAGE_CONFIG],
     },
   ],
+  imports: [ConfigModule],
 })
 export class DocumentsModule {}
