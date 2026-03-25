@@ -52,6 +52,8 @@
     "db:backup": "bash scripts/backup.sh",
     "db:restore": "bash scripts/restore.sh",
     "db:benchmark": "ts-node test/database/performance.benchmark.ts",
+    "loadtest": "npx k6 run loadtests/propchain-loadtest.js",
+    "loadtest:ci": "npx k6 run --out json=artifacts/k6-results.json loadtests/propchain-loadtest.js",
     "docs:generate": "typedoc --skipErrorChecking"
   },
   "dependencies": {
@@ -168,7 +170,8 @@
     "tsconfig-paths": "^4.2.0",
     "typedoc": "^0.28.18",
     "typedoc-plugin-markdown": "^4.11.0",
-    "typescript": "^5.3.2"
+    "typescript": "^5.3.2",
+    "k6": "^0.45.0"
   },
   "engines": {
     "node": ">=18.0.0",
