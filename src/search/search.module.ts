@@ -1,30 +1,14 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { SearchController } from './search.controller';
 import { SearchService } from './search.service';
-import {
-  SearchQueryDto,
-  SearchResponseDto,
-  SearchAnalyticsReportDto,
-} from './dto/search.dto';
+import { SearchCache } from './entities/search-cache.entity';
+import { SearchAnalytics } from './entities/search-analytics.entity';
 
-@ApiTags('Search')
-@Controller('search')
-export class SearchController {
-  constructor(private readonly searchService: SearchService) {}
-
-  @Get()
-  @ApiOperation({ summary: 'Full-text search across calls and users' })
-  @ApiResponse({ status: 200, type: SearchResponseDto })
-  search(@Query() dto: SearchQueryDto): Promise<SearchResponseDto> {
-    return this.searchService.search(dto);
-  }
-
-  @Get('analytics')
-  @ApiOperation({ summary: 'Search analytics report for the last 30 days' })
-  @ApiResponse({ status: 200, type: SearchAnalyticsReportDto })
-  analytics(): Promise<SearchAnalyticsReportDto> {
-    const since = new Date();
-    since.setDate(since.getDate() - 30);
-    return this.searchService.getAnalyticsReport(since);
-  }
-}
+@Module({
+  imports: [TypeOrmModule.forFeature([SearchCache, SearchAnalytics])],
+  controllers: [SearchController],
+  providers: [SearchService],
+  exports: [SearchService],
+})
+export class SearchModule {}

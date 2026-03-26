@@ -10,10 +10,12 @@ export const options = {
   },
 };
 
-const API_URL = __ENV.API_URL || 'http://localhost:3000';
+const API_URL = (__ENV.API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+const configuredHealthPath = __ENV.HEALTH_PATH || '/api/v1/health/liveness';
+const HEALTH_PATH = configuredHealthPath.startsWith('/') ? configuredHealthPath : `/${configuredHealthPath}`;
 
 export default function () {
-  const res = http.get(`${API_URL}/health`);
+  const res = http.get(`${API_URL}${HEALTH_PATH}`);
   check(res, {
     'health status is 200': r => r.status === 200,
   });

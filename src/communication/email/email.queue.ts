@@ -40,22 +40,15 @@ export class EmailQueueService implements OnModuleDestroy {
    * Add email to queue
    */
   async add<T = any>(queueName: string, data: T, options?: any): Promise<string> {
-    const queue = this.getQueue(queueName);
+    const resolvedQueueName = this.normalizeQueueName(queueName);
+    const queue = this.getQueue(resolvedQueueName);
 
     try {
-      const job = await queue.add(data, {
-        attempts: options?.attempts || 3,
-        backoff: options?.backoff || 'exponential',
-        delay: options?.delay || 0,
-        priority: options?.priority || 0,
-        timeout: options?.timeout || this.jobTimeoutMs,
-        removeOnComplete: options?.removeOnComplete !== false,
-        removeOnFail: options?.removeOnFail !== false,
-      });
+      const job = await queue.add(data, this.buildJobOptions(options));
 
-      this.logger.log(`Added job to ${queueName} queue`, {
+      this.logger.log(`Added job to ${resolvedQueueName} queue`, {
         jobId: job.id,
-        queueName,
+        queueName: resolvedQueueName,
         data: typeof data === 'object' ? Object.keys(data as object) : data,
       });
 
@@ -168,7 +161,8 @@ export class EmailQueueService implements OnModuleDestroy {
    * Get queue statistics
    */
   async getQueueStats(queueName: string): Promise<QueueStats> {
-    const queue = this.getQueue(queueName);
+    const resolvedQueueName = this.normalizeQueueName(queueName);
+    const queue = this.getQueue(resolvedQueueName);
 
     try {
       const waiting = await queue.getWaiting();
@@ -177,7 +171,7 @@ export class EmailQueueService implements OnModuleDestroy {
       const failed = await queue.getFailed();
 
       return {
-        queueName,
+        queueName: resolvedQueueName,
         waiting: waiting.length,
         active: active.length,
         completed: completed.length,
@@ -185,9 +179,9 @@ export class EmailQueueService implements OnModuleDestroy {
         total: waiting.length + active.length,
       };
     } catch (error) {
-      this.logger.error(`Failed to get queue stats for ${queueName}`, error);
+      this.logger.error(`Failed to get queue stats for ${resolvedQueueName}`, error);
       return {
-        queueName,
+        queueName: resolvedQueueName,
         waiting: 0,
         active: 0,
         completed: 0,
@@ -226,35 +220,39 @@ export class EmailQueueService implements OnModuleDestroy {
    * Pause queue
    */
   async pauseQueue(queueName: string): Promise<void> {
-    const queue = this.getQueue(queueName);
+    const resolvedQueueName = this.normalizeQueueName(queueName);
+    const queue = this.getQueue(resolvedQueueName);
     await queue.pause();
-    this.logger.log(`Paused ${queueName} queue`);
+    this.logger.log(`Paused ${resolvedQueueName} queue`);
   }
 
   /**
    * Resume queue
    */
   async resumeQueue(queueName: string): Promise<void> {
-    const queue = this.getQueue(queueName);
+    const resolvedQueueName = this.normalizeQueueName(queueName);
+    const queue = this.getQueue(resolvedQueueName);
     await queue.resume();
-    this.logger.log(`Resumed ${queueName} queue`);
+    this.logger.log(`Resumed ${resolvedQueueName} queue`);
   }
 
   /**
    * Clear queue
    */
   async clearQueue(queueName: string): Promise<void> {
-    const queue = this.getQueue(queueName);
+    const resolvedQueueName = this.normalizeQueueName(queueName);
+    const queue = this.getQueue(resolvedQueueName);
     await queue.clean(0, 'completed');
     await queue.clean(0, 'failed');
-    this.logger.log(`Cleared ${queueName} queue`);
+    this.logger.log(`Cleared ${resolvedQueueName} queue`);
   }
 
   /**
    * Retry failed jobs
    */
   async retryFailedJobs(queueName: string): Promise<number> {
-    const queue = this.getQueue(queueName);
+    const resolvedQueueName = this.normalizeQueueName(queueName);
+    const queue = this.getQueue(resolvedQueueName);
     const failed = await queue.getFailed();
 
     let retryCount = 0;
@@ -267,8 +265,26 @@ export class EmailQueueService implements OnModuleDestroy {
       }
     }
 
-    this.logger.log(`Retried ${retryCount} failed jobs in ${queueName} queue`);
+    this.logger.log(`Retried ${retryCount} failed jobs in ${resolvedQueueName} queue`);
     return retryCount;
+  }
+
+  async getFailedJobs(queueName: string, limit: number = 20): Promise<FailedQueueJob[]> {
+    const resolvedQueueName = this.normalizeQueueName(queueName);
+    const queue = this.getQueue(resolvedQueueName);
+    const failedJobs = await queue.getFailed();
+
+    return failedJobs.slice(0, limit).map(job => ({
+      id: job.id?.toString() || 'unknown',
+      queueName: resolvedQueueName,
+      name: job.name || 'unnamed-job',
+      failedReason: job.failedReason,
+      attemptsMade: job.attemptsMade,
+      maxAttempts: Number(job.opts?.attempts ?? 1),
+      timestamp: new Date(job.timestamp).toISOString(),
+      processedOn: job.processedOn ? new Date(job.processedOn).toISOString() : undefined,
+      finishedOn: job.finishedOn ? new Date(job.finishedOn).toISOString() : undefined,
+    }));
   }
 
   /**
@@ -384,6 +400,43 @@ export class EmailQueueService implements OnModuleDestroy {
       default:
         return this.emailQueue;
     }
+  }
+
+  private normalizeQueueName(queueName: string): 'default' | 'priority' | 'batch' {
+    switch (queueName) {
+      case 'email-priority':
+      case 'priority':
+        return 'priority';
+      case 'email-batch':
+      case 'batch':
+        return 'batch';
+      default:
+        return 'default';
+    }
+  }
+
+  private buildJobOptions(options?: any) {
+    const backoff = options?.backoff
+      ? typeof options.backoff === 'string'
+        ? {
+            type: options.backoff,
+            delay: this.configService.get<number>('EMAIL_QUEUE_BACKOFF_DELAY_MS', 1000),
+          }
+        : options.backoff
+      : {
+          type: 'exponential',
+          delay: this.configService.get<number>('EMAIL_QUEUE_BACKOFF_DELAY_MS', 1000),
+        };
+
+    return {
+      attempts: options?.attempts || 3,
+      backoff,
+      delay: options?.delay || 0,
+      priority: options?.priority || 0,
+      timeout: options?.timeout || this.jobTimeoutMs,
+      removeOnComplete: options?.removeOnComplete ?? this.completedJobRetention,
+      removeOnFail: options?.removeOnFail ?? this.failedJobRetention,
+    };
   }
 
   /**
@@ -548,7 +601,7 @@ export class EmailQueueService implements OnModuleDestroy {
 }
 
 // Type definitions
-interface EmailJobResult {
+export interface EmailJobResult {
   success: boolean;
   emailId?: string;
   provider?: string;
@@ -584,7 +637,7 @@ interface ScheduledEmailJobData {
   scheduledFor: Date;
 }
 
-interface QueueStats {
+export interface QueueStats {
   queueName: string;
   waiting: number;
   active: number;
@@ -593,9 +646,21 @@ interface QueueStats {
   total: number;
 }
 
-interface AllQueueStats {
+export interface AllQueueStats {
   default: QueueStats;
   priority: QueueStats;
   batch: QueueStats;
   total: QueueStats;
+}
+
+export interface FailedQueueJob {
+  id: string;
+  queueName: string;
+  name: string;
+  failedReason: string;
+  attemptsMade: number;
+  maxAttempts: number;
+  timestamp: string;
+  processedOn?: string;
+  finishedOn?: string;
 }

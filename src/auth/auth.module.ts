@@ -11,7 +11,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginAttemptsGuard } from './guards/login-attempts.guard';
 import { MfaModule } from './mfa/mfa.module';
 import { UsersModule } from '../users/users.module';
-import { PrismaService } from '../database/prisma/prisma.service';
 
 @Module({
   imports: [
@@ -36,7 +35,6 @@ import { PrismaService } from '../database/prisma/prisma.service';
     JwtStrategy,
     LocalStrategy,
     Web3Strategy,
-    PrismaService,
     {
       provide: 'JwtAuthGuard',
       useClass: JwtAuthGuard,

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   NotFoundException,
   UserNotFoundException,
@@ -11,6 +11,8 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyQueryDto } from './dto/property-query.dto';
 import { ConfigService } from '@nestjs/config';
 import { MultiLevelCacheService } from '../common/cache/multi-level-cache.service';
+import { BaseService } from '../common/services/base.service';
+import { BoundaryValidationService } from '../common/validation';
 
 /**
  * Properties Service
@@ -24,14 +26,15 @@ import { MultiLevelCacheService } from '../common/cache/multi-level-cache.servic
  * @class PropertiesService
  */
 @Injectable()
-export class PropertiesService {
-  private readonly logger = new Logger(PropertiesService.name);
-
+export class PropertiesService extends BaseService {
   constructor(
-    private prisma: PrismaService,
-    private configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
     private readonly cacheService: MultiLevelCacheService,
-  ) {}
+    boundaryValidation: BoundaryValidationService,
+  ) {
+    super(boundaryValidation, PropertiesService.name);
+  }
 
   /**
    * Create a new property listing
@@ -59,6 +62,8 @@ export class PropertiesService {
    * ```
    */
   async create(createPropertyDto: CreatePropertyDto, ownerId: string) {
+    const input = await this.validateInput(CreatePropertyDto, createPropertyDto, 'create');
+
     try {
       const owner = await (this.prisma as any).user.findUnique({
         where: { id: ownerId },
@@ -68,20 +73,20 @@ export class PropertiesService {
         throw new UserNotFoundException(ownerId);
       }
 
-      const location = this.formatAddress(createPropertyDto.address);
+      const location = this.formatAddress(input.address);
 
       const property = await (this.prisma as any).property.create({
         data: {
-          title: createPropertyDto.title,
-          description: createPropertyDto.description,
+          title: input.title,
+          description: input.description,
           location,
-          price: createPropertyDto.price,
-          status: this.mapPropertyStatus(createPropertyDto.status || DTOPropertyStatus.AVAILABLE),
+          price: input.price,
+          status: this.mapPropertyStatus(input.status || DTOPropertyStatus.AVAILABLE),
           ownerId,
-          bedrooms: createPropertyDto.bedrooms,
-          bathrooms: createPropertyDto.bathrooms,
-          squareFootage: createPropertyDto.areaSqFt,
-          propertyType: createPropertyDto.type,
+          bedrooms: input.bedrooms,
+          bathrooms: input.bathrooms,
+          squareFootage: input.areaSqFt,
+          propertyType: input.type,
         },
         include: {
           owner: {
@@ -129,6 +134,10 @@ export class PropertiesService {
    * ```
    */
   async findAll(query?: PropertyQueryDto) {
+    const normalizedQuery = query
+      ? await this.validateInput(PropertyQueryDto, query, 'findAll', { skipMissingProperties: true })
+      : undefined;
+
     const {
       page = 1,
       limit = 20,
@@ -148,7 +157,7 @@ export class PropertiesService {
       minArea,
       maxArea,
       ownerId,
-    } = query || {};
+    } = normalizedQuery || {};
 
     const skip = (page - 1) * limit;
     const where: Record<string, any> = {};
@@ -224,7 +233,7 @@ export class PropertiesService {
       where.ownerId = ownerId;
     }
 
-    const cacheKey = this.buildPropertyListCacheKey(query);
+    const cacheKey = this.buildPropertyListCacheKey(normalizedQuery);
 
     try {
       return await this.cacheService.wrap(
@@ -297,6 +306,10 @@ export class PropertiesService {
   }
 
   async update(id: string, updatePropertyDto: UpdatePropertyDto) {
+    const input = await this.validateInput(UpdatePropertyDto, updatePropertyDto, 'update', {
+      skipMissingProperties: true,
+    });
+
     try {
       const existingProperty = await (this.prisma as any).property.findUnique({
         where: { id },
@@ -308,32 +321,32 @@ export class PropertiesService {
 
       const updateData: any = {};
 
-      if (updatePropertyDto.title !== undefined) {
-        updateData.title = updatePropertyDto.title;
+      if (input.title !== undefined) {
+        updateData.title = input.title;
       }
-      if (updatePropertyDto.description !== undefined) {
-        updateData.description = updatePropertyDto.description;
+      if (input.description !== undefined) {
+        updateData.description = input.description;
       }
-      if (updatePropertyDto.price !== undefined) {
-        updateData.price = updatePropertyDto.price;
+      if (input.price !== undefined) {
+        updateData.price = input.price;
       }
-      if (updatePropertyDto.address) {
-        updateData.location = this.formatAddress(updatePropertyDto.address);
+      if (input.address) {
+        updateData.location = this.formatAddress(input.address);
       }
-      if (updatePropertyDto.status !== undefined) {
-        updateData.status = this.mapPropertyStatus(updatePropertyDto.status);
+      if (input.status !== undefined) {
+        updateData.status = this.mapPropertyStatus(input.status);
       }
-      if (updatePropertyDto.bedrooms !== undefined) {
-        updateData.bedrooms = updatePropertyDto.bedrooms;
+      if (input.bedrooms !== undefined) {
+        updateData.bedrooms = input.bedrooms;
       }
-      if (updatePropertyDto.bathrooms !== undefined) {
-        updateData.bathrooms = updatePropertyDto.bathrooms;
+      if (input.bathrooms !== undefined) {
+        updateData.bathrooms = input.bathrooms;
       }
-      if (updatePropertyDto.areaSqFt !== undefined) {
-        updateData.squareFootage = updatePropertyDto.areaSqFt;
+      if (input.areaSqFt !== undefined) {
+        updateData.squareFootage = input.areaSqFt;
       }
-      if (updatePropertyDto.type !== undefined) {
-        updateData.propertyType = updatePropertyDto.type;
+      if (input.type !== undefined) {
+        updateData.propertyType = input.type;
       }
 
       const property = await (this.prisma as any).property.update({

@@ -139,7 +139,7 @@ export class EmailService {
    */
   async scheduleEmail(emailData: EmailData, scheduledFor: Date, metadata?: EmailMetadata): Promise<string> {
     const jobId = await this.queueService.add(
-      'send-email',
+      'default',
       {
         emailData,
         scheduledFor,

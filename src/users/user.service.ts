@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   NotFoundException,
   ConflictException,
   UnauthorizedException,
@@ -13,6 +12,8 @@ import { PasswordValidator } from '../common/validators/password.validator';
 import { PasswordRotationService } from '../common/services/password-rotation.service';
 import { ConfigService } from '@nestjs/config';
 import { MultiLevelCacheService } from '../common/cache/multi-level-cache.service';
+import { BaseService } from '../common/services/base.service';
+import { BoundaryValidationService } from '../common/validation';
 
 /**
  * UserService
@@ -31,16 +32,17 @@ import { MultiLevelCacheService } from '../common/cache/multi-level-cache.servic
  * @injectable
  */
 @Injectable()
-export class UserService {
-  private readonly logger = new Logger(UserService.name);
-
+export class UserService extends BaseService {
   constructor(
-    private prisma: PrismaService,
+    private readonly prisma: PrismaService,
     private readonly passwordValidator: PasswordValidator,
     private readonly passwordRotationService: PasswordRotationService,
     private readonly configService: ConfigService,
     private readonly cacheService: MultiLevelCacheService,
-  ) {}
+    boundaryValidation: BoundaryValidationService,
+  ) {
+    super(boundaryValidation, UserService.name);
+  }
 
   /**
    * Create a new user account
@@ -92,7 +94,8 @@ export class UserService {
    * ```
    */
   async create(createUserDto: CreateUserDto) {
-    const { email, password, walletAddress } = createUserDto;
+    const input = await this.validateInput(CreateUserDto, createUserDto, 'create');
+    const { email, password, walletAddress } = input;
 
     // === PASSWORD STRENGTH VALIDATION ===
     // Ensures password meets security requirements:

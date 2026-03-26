@@ -9,6 +9,7 @@ Welcome to the PropChain Backend developer documentation. This guide provides a 
 - [Getting Started](#getting-started)
 - [Development Workflow](#development-workflow)
 - [Module Organization](#module-organization)
+- [Service Layer Architecture](./SERVICE_LAYER_ARCHITECTURE.md)
 - [Database & Prisma](#database--prisma)
 - [Security](#security)
 - [Testing](#testing)
@@ -37,7 +38,7 @@ The project follows a modular architecture based on NestJS principles. Each feat
 - **Database:** Prisma integration and migration utilities.
 - **Common:** Shared utilities, logging, and error handling.
 
-For more details on internal organization, see the [Module Organization Guide](./MODULE_ORGANIZATION_GUIDE.md).
+For more details on internal organization, see the [Module Organization Guide](./MODULE_ORGANIZATION_GUIDE.md) and the [Service Layer Architecture](./SERVICE_LAYER_ARCHITECTURE.md).
 
 ## Getting Started
 
@@ -60,6 +61,7 @@ See [ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md) for detailed configur
 
 ### Coding Standards
 - Follow the [Module Organization Guide](./MODULE_ORGANIZATION_GUIDE.md) for file structure and naming.
+- Follow the [Service Layer Architecture](./SERVICE_LAYER_ARCHITECTURE.md) guide for boundary validation and dependency injection patterns.
 - Use JSDoc for all public classes and methods.
 - Run linting before committing: `npm run lint`
 
@@ -79,7 +81,7 @@ We use Prisma as our ORM. Always use `prisma/schema.prisma` as the single source
 - `npm run migrate`: Create and apply a new migration
 - `npm run db:seed`: Seed the database with initial data
 
-See the [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) and [DATABASE_OPTIMIZATION_GUIDE.md](./DATABASE_OPTIMIZATION_GUIDE.md) for more info.
+See the [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md), [DATABASE_OPTIMIZATION_GUIDE.md](./DATABASE_OPTIMIZATION_GUIDE.md), and [ZERO_DOWNTIME_MIGRATIONS.md](./ZERO_DOWNTIME_MIGRATIONS.md) for more info.
 
 ## Security
 

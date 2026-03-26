@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { RedisService } from '../common/services/redis.service';
@@ -10,6 +10,8 @@ import { API_KEY_SCOPES, ApiKeyScope } from './enums/api-key-scope.enum';
 import { ApiKeyAnalyticsService, UsageLogEntry } from './api-key-analytics.service';
 import * as crypto from 'crypto';
 import * as CryptoJS from 'crypto-js';
+import { BaseService } from '../common/services/base.service';
+import { BoundaryValidationService } from '../common/validation';
 
 export interface RotationResult {
   id: string;
@@ -31,12 +33,11 @@ export interface RotationStatus {
 }
 
 @Injectable()
-export class ApiKeyService {
+export class ApiKeyService extends BaseService {
   private readonly encryptionKey: string;
   private readonly globalRateLimit: number;
   private readonly rotationIntervalDays: number;
   private readonly rotationWarningDays: number;
-  private readonly logger = new Logger(ApiKeyService.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -44,7 +45,9 @@ export class ApiKeyService {
     private readonly configService: ConfigService,
     private readonly paginationService: PaginationService,
     private readonly analyticsService: ApiKeyAnalyticsService,
+    boundaryValidation: BoundaryValidationService,
   ) {
+    super(boundaryValidation, ApiKeyService.name);
     this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
     this.globalRateLimit = this.configService.get<number>('API_KEY_RATE_LIMIT_PER_MINUTE', 60);
     this.rotationIntervalDays = this.configService.get<number>('API_KEY_ROTATION_DAYS', 90);
@@ -56,7 +59,8 @@ export class ApiKeyService {
   }
 
   async create(createApiKeyDto: CreateApiKeyDto): Promise<CreateApiKeyResponseDto> {
-    this.validateScopes(createApiKeyDto.scopes);
+    const input = await this.validateInput(CreateApiKeyDto, createApiKeyDto, 'create');
+    this.validateScopes(input.scopes);
 
     const plainKey = this.generateApiKey();
     const keyPrefix = this.extractKeyPrefix(plainKey);
@@ -68,27 +72,31 @@ export class ApiKeyService {
 
     const apiKey = await this.prisma.apiKey.create({
       data: {
-        name: createApiKeyDto.name,
+        name: input.name,
         key: encryptedKey,
         keyPrefix,
-        scopes: createApiKeyDto.scopes,
-        rateLimit: createApiKeyDto.rateLimit,
+        scopes: input.scopes,
+        rateLimit: input.rateLimit,
         rotationDueAt,
         lastRotatedAt: new Date(),
       },
     });
 
-    return {
+    return this.mapOutput(CreateApiKeyResponseDto, {
       ...this.mapToResponseDto(apiKey),
       key: plainKey,
-    };
+    });
   }
 
   async findAll(
     paginationQuery?: PaginationQueryDto,
   ): Promise<ApiKeyResponseDto[] | PaginatedResponseDto<ApiKeyResponseDto>> {
+    const normalizedQuery = paginationQuery
+      ? await this.validateInput(PaginationQueryDto, paginationQuery, 'findAll', { skipMissingProperties: true })
+      : undefined;
+
     // If no pagination query provided, return all (for backward compatibility)
-    if (!paginationQuery) {
+    if (!normalizedQuery) {
       const apiKeys = await this.prisma.apiKey.findMany({
         orderBy: { createdAt: 'desc' },
       });
@@ -96,7 +104,7 @@ export class ApiKeyService {
     }
 
     // Paginated response
-    const { skip, take, orderBy } = this.paginationService.getPrismaOptions(paginationQuery, 'createdAt');
+    const { skip, take, orderBy } = this.paginationService.getPrismaOptions(normalizedQuery, 'createdAt');
 
     const [apiKeys, total] = await Promise.all([
       this.prisma.apiKey.findMany({
@@ -108,7 +116,7 @@ export class ApiKeyService {
     ]);
 
     const data = apiKeys.map(apiKey => this.mapToResponseDto(apiKey));
-    return this.paginationService.formatResponse(data, total, paginationQuery);
+    return this.paginationService.formatResponse(data, total, normalizedQuery);
   }
 
   async findOne(id: string): Promise<ApiKeyResponseDto> {
@@ -124,8 +132,12 @@ export class ApiKeyService {
   }
 
   async update(id: string, updateApiKeyDto: UpdateApiKeyDto): Promise<ApiKeyResponseDto> {
-    if (updateApiKeyDto.scopes) {
-      this.validateScopes(updateApiKeyDto.scopes);
+    const input = await this.validateInput(UpdateApiKeyDto, updateApiKeyDto, 'update', {
+      skipMissingProperties: true,
+    });
+
+    if (input.scopes) {
+      this.validateScopes(input.scopes);
     }
 
     const apiKey = await this.prisma.apiKey.findUnique({
@@ -138,7 +150,7 @@ export class ApiKeyService {
 
     const updatedApiKey = await this.prisma.apiKey.update({
       where: { id },
-      data: updateApiKeyDto,
+      data: input,
     });
 
     return this.mapToResponseDto(updatedApiKey);
@@ -276,7 +288,7 @@ export class ApiKeyService {
   }
 
   private mapToResponseDto(apiKey: any): ApiKeyResponseDto {
-    return {
+    return this.mapOutput(ApiKeyResponseDto, {
       id: apiKey.id,
       name: apiKey.name,
       keyPrefix: apiKey.keyPrefix,
@@ -289,7 +301,7 @@ export class ApiKeyService {
       rotationDueAt: apiKey.rotationDueAt,
       createdAt: apiKey.createdAt,
       updatedAt: apiKey.updatedAt,
-    };
+    });
   }
 
   // ==================== KEY ROTATION METHODS ====================

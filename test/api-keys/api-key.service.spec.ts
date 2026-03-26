@@ -11,6 +11,7 @@ import { ApiKeyResponseDto } from '../../src/api-keys/dto/api-key-response.dto';
 import { ApiKeyScope } from '../../src/api-keys/enums/api-key-scope.enum';
 
 import { PaginationService } from '../../src/common/pagination/pagination.service';
+import { BoundaryValidationService } from '../../src/common/validation';
 describe('ApiKeyService', () => {
   let service: ApiKeyService;
   let prismaService: PrismaService;
@@ -64,6 +65,7 @@ describe('ApiKeyService', () => {
         { provide: ConfigService, useValue: mockConfigService },
         { provide: PaginationService, useValue: {} },
         { provide: ApiKeyAnalyticsService, useValue: mockAnalyticsService },
+        BoundaryValidationService,
       ],
     }).compile();
 

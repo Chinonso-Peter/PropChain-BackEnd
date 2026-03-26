@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Cron, CronExpression, Injectable as Inj, Logger as Log } from '@nestjs/schedule';
+import { Injectable as Inj, Logger as Log } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { AuditService } from './audit.service';
 import { AuditController } from './audit.controller';
 import { AuditInterceptor } from './interceptors/audit.interceptor';
@@ -20,10 +21,7 @@ class AuditRetentionTask {
 }
 
 @Module({
-  imports: [
-    ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([AuditLog]),
-  ],
+  imports: [ScheduleModule.forRoot(), TypeOrmModule.forFeature([AuditLog])],
   controllers: [AuditController],
   providers: [AuditService, AuditInterceptor, AuditRetentionTask],
   exports: [AuditService, AuditInterceptor],

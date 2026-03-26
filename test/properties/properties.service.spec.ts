@@ -10,6 +10,7 @@ import { PropertyQueryDto } from '../../src/properties/dto/property-query.dto';
 import { NotFoundException, UserNotFoundException, InvalidInputException, BusinessRuleViolationException } from '../../src/common/errors/custom.exceptions';
 import { Decimal } from '@prisma/client/runtime/library';
 import { MultiLevelCacheService } from '../../src/common/cache/multi-level-cache.service';
+import { BoundaryValidationService } from '../../src/common/validation';
 
 describe('PropertiesService', () => {
   let service: PropertiesService;
@@ -104,6 +105,7 @@ describe('PropertiesService', () => {
           provide: MultiLevelCacheService,
           useValue: mockCacheService,
         },
+        BoundaryValidationService,
       ],
     }).compile();
 

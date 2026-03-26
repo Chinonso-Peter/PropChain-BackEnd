@@ -63,6 +63,7 @@ import { HeaderValidationMiddleware } from './security/middleware/header-validat
 import { RequestValidationInterceptor } from './security/api/request.validation';
 import { StaticCacheMiddleware } from './static-cache/middleware/static-cache.middleware';
 import { ObservabilityModule } from './observability/observability.module';
+import { BoundaryValidationModule } from './common/validation';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { ObservabilityModule } from './observability/observability.module';
     }),
 
     ConfigurationModule,
+    BoundaryValidationModule,
 
     // I18n
     I18nModule.forRootAsync({

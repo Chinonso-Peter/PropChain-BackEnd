@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, LessThan, Repository } from 'typeorm';
-import { AuditLog, AuditAction } from './audit-log.entity';
+import { AuditLog, AuditAction } from './entities/audit-log.entity';
 
 export interface AuditEntry {
   action: AuditAction;
@@ -52,24 +52,24 @@ export class AuditService {
    * business operation.
    */
   async log(entry: AuditEntry): Promise<void> {
-    await this.auditRepo.save(entry).catch((err) =>
-      this.logger.error('Failed to write audit log', err),
-    );
+    await this.auditRepo.save(entry).catch(err => this.logger.error('Failed to write audit log', err));
   }
 
   // ─── Query ─────────────────────────────────────────────────────────────────
 
-  async findAll(
-    filters: AuditReportFilters,
-    page = 1,
-    limit = 50,
-  ): Promise<{ data: AuditLog[]; total: number }> {
+  async findAll(filters: AuditReportFilters, page = 1, limit = 50): Promise<{ data: AuditLog[]; total: number }> {
     const where: Record<string, unknown> = {
       createdAt: Between(filters.from, filters.to),
     };
-    if (filters.action)       where['action']       = filters.action;
-    if (filters.actorAddress) where['actorAddress'] = filters.actorAddress;
-    if (filters.targetType)   where['targetType']   = filters.targetType;
+    if (filters.action) {
+      where['action'] = filters.action;
+    }
+    if (filters.actorAddress) {
+      where['actorAddress'] = filters.actorAddress;
+    }
+    if (filters.targetType) {
+      where['targetType'] = filters.targetType;
+    }
 
     const [data, total] = await this.auditRepo.findAndCount({
       where,
@@ -88,19 +88,27 @@ export class AuditService {
       .createQueryBuilder('a')
       .where('a.createdAt BETWEEN :from AND :to', { from: filters.from, to: filters.to });
 
-    if (filters.action)       base.andWhere('a.action = :action',             { action: filters.action });
-    if (filters.actorAddress) base.andWhere('a.actorAddress = :actorAddress', { actorAddress: filters.actorAddress });
-    if (filters.targetType)   base.andWhere('a.targetType = :targetType',     { targetType: filters.targetType });
+    if (filters.action) {
+      base.andWhere('a.action = :action', { action: filters.action });
+    }
+    if (filters.actorAddress) {
+      base.andWhere('a.actorAddress = :actorAddress', { actorAddress: filters.actorAddress });
+    }
+    if (filters.targetType) {
+      base.andWhere('a.targetType = :targetType', { targetType: filters.targetType });
+    }
 
     const [byAction, byActor, totalRaw] = await Promise.all([
-      base.clone()
+      base
+        .clone()
         .select('a.action', 'action')
         .addSelect('COUNT(*)', 'count')
         .groupBy('a.action')
         .orderBy('count', 'DESC')
         .getRawMany<{ action: string; count: string }>(),
 
-      base.clone()
+      base
+        .clone()
         .select('a.actorAddress', 'actorAddress')
         .addSelect('COUNT(*)', 'count')
         .where('a.actorAddress IS NOT NULL')
@@ -110,15 +118,13 @@ export class AuditService {
         .limit(20)
         .getRawMany<{ actorAddress: string; count: string }>(),
 
-      base.clone()
-        .select('COUNT(*)', 'total')
-        .getRawOne<{ total: string }>(),
+      base.clone().select('COUNT(*)', 'total').getRawOne<{ total: string }>(),
     ]);
 
     return {
       totalEvents: parseInt(totalRaw?.total ?? '0', 10),
-      byAction: byAction.map((r) => ({ action: r.action, count: Number(r.count) })),
-      byActor: byActor.map((r) => ({ actorAddress: r.actorAddress, count: Number(r.count) })),
+      byAction: byAction.map(r => ({ action: r.action, count: Number(r.count) })),
+      byActor: byActor.map(r => ({ actorAddress: r.actorAddress, count: Number(r.count) })),
       retentionDays: RETENTION_DAYS,
     };
   }

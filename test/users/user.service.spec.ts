@@ -6,6 +6,7 @@ import { PasswordValidator } from '../../src/common/validators/password.validato
 import { PasswordRotationService } from '../../src/common/services/password-rotation.service';
 import { ConfigService } from '@nestjs/config';
 import { MultiLevelCacheService } from '../../src/common/cache/multi-level-cache.service';
+import { BoundaryValidationService } from '../../src/common/validation';
 
 describe('UserService', () => {
   let service: UserService;
@@ -60,6 +61,7 @@ describe('UserService', () => {
         { provide: PasswordRotationService, useValue: mockPasswordRotationService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: MultiLevelCacheService, useValue: mockCacheService },
+        BoundaryValidationService,
       ],
     }).compile();
 

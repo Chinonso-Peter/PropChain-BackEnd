@@ -84,7 +84,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = this.i18n.translate(`errors.${ErrorCode.VALIDATION_ERROR}`, { lang }) as string;
         details = responseObj.message;
       } else {
-        errorCode = this.mapStatusToErrorCode(status);
+        errorCode = responseObj.errorCode || this.mapStatusToErrorCode(status);
         const translatedMessage = this.i18n.translate(`errors.${errorCode}`, { lang }) as string;
         // fallback to standard message if translation key returns itself or we didn't translate
         message =

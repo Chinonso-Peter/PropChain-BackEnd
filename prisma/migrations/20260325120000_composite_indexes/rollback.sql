@@ -1,0 +1,14 @@
+DROP INDEX IF EXISTS "system_logs_context_timestamp_idx";
+DROP INDEX IF EXISTS "system_logs_log_level_timestamp_idx";
+DROP INDEX IF EXISTS "system_logs_timestamp_idx";
+DROP INDEX IF EXISTS "audit_logs_operation_timestamp_idx";
+DROP INDEX IF EXISTS "audit_logs_table_name_timestamp_idx";
+DROP INDEX IF EXISTS "audit_logs_user_id_timestamp_idx";
+DROP INDEX IF EXISTS "audit_logs_timestamp_idx";
+DROP INDEX IF EXISTS "property_valuations_property_id_valuation_date_idx";
+DROP INDEX IF EXISTS "properties_status_price_idx";
+DROP INDEX IF EXISTS "properties_owner_id_created_at_idx";
+DROP INDEX IF EXISTS "properties_status_created_at_idx";
+DROP INDEX IF EXISTS "user_relationships_follower_id_status_created_at_idx";
+DROP INDEX IF EXISTS "user_relationships_following_id_status_created_at_idx";
+DROP INDEX IF EXISTS "user_activities_user_id_action_created_at_idx";

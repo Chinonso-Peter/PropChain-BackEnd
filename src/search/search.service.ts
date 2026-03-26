@@ -4,12 +4,7 @@ import { LessThan, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { SearchCache } from './entities/search-cache.entity';
 import { SearchAnalytics } from './entities/search-analytics.entity';
-import {
-  SearchQueryDto,
-  SearchResponseDto,
-  SearchResultItemDto,
-  SearchAnalyticsReportDto,
-} from './dto/search.dto';
+import { SearchQueryDto, SearchResponseDto, SearchResultItemDto, SearchAnalyticsReportDto } from './dto/search.dto';
 
 /** Cache TTL: 5 minutes */
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -64,15 +59,12 @@ export class SearchService {
       .createQueryBuilder('a')
       .select('COUNT(*)', 'total')
       .addSelect('AVG(a.durationMs)', 'avgDuration')
-      .addSelect(
-        'SUM(CASE WHEN a.cacheHit = true THEN 1 ELSE 0 END)::float / COUNT(*) * 100',
-        'hitRate',
-      )
+      .addSelect('SUM(CASE WHEN a.cacheHit = true THEN 1 ELSE 0 END)::float / COUNT(*) * 100', 'hitRate')
       .where('a.createdAt >= :since', { since })
       .getRawOne<{ total: string; avgDuration: string; hitRate: string }>();
 
     return {
-      topQueries: topRaw.map((r) => ({ query: r.query, count: Number(r.count) })),
+      topQueries: topRaw.map(r => ({ query: r.query, count: Number(r.count) })),
       cacheHitRate: parseFloat(stats?.hitRate ?? '0'),
       avgDurationMs: parseFloat(stats?.avgDuration ?? '0'),
       totalSearches: parseInt(stats?.total ?? '0', 10),
@@ -132,7 +124,7 @@ export class SearchService {
       [query],
     );
 
-    return results.map((r) => ({
+    return results.map(r => ({
       id: r.id,
       type: r.type as 'call' | 'user',
       title: r.title,
@@ -143,20 +135,18 @@ export class SearchService {
 
   private async getCache(queryHash: string): Promise<SearchCache | null> {
     const entry = await this.cacheRepo.findOne({ where: { queryHash } });
-    if (!entry || entry.expiresAt < new Date()) return null;
+    if (!entry || entry.expiresAt < new Date()) {
+      return null;
+    }
 
     this.cacheRepo
       .increment({ queryHash }, 'hitCount', 1)
-      .catch((e) => this.logger.warn('Cache hit increment failed', e));
+      .catch(e => this.logger.warn('Cache hit increment failed', e));
 
     return entry;
   }
 
-  private async setCache(
-    queryHash: string,
-    query: string,
-    results: SearchResultItemDto[],
-  ): Promise<void> {
+  private async setCache(queryHash: string, query: string, results: SearchResultItemDto[]): Promise<void> {
     const expiresAt = new Date(Date.now() + CACHE_TTL_MS);
     await this.cacheRepo
       .createQueryBuilder()
@@ -176,7 +166,7 @@ export class SearchService {
   ): Promise<void> {
     await this.analyticsRepo
       .save({ query, userAddress, resultCount, durationMs, cacheHit })
-      .catch((e) => this.logger.warn('Failed to record search analytics', e));
+      .catch(e => this.logger.warn('Failed to record search analytics', e));
   }
 
   private normalise(q: string): string {

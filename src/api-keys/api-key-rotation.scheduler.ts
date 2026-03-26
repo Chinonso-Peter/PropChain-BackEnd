@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiKeyService } from './api-key.service';
 import { ApiKeyAnalyticsService } from './api-key-analytics.service';
 import { ConfigService } from '@nestjs/config';
+import { BackgroundJobMonitoringService } from '../communication/jobs/background-job-monitoring.service';
 
 @Injectable()
 export class ApiKeyRotationScheduler {
@@ -13,6 +14,7 @@ export class ApiKeyRotationScheduler {
     private readonly apiKeyService: ApiKeyService,
     private readonly analyticsService: ApiKeyAnalyticsService,
     private readonly configService: ConfigService,
+    private readonly jobMonitoringService: BackgroundJobMonitoringService,
   ) {
     this.retentionDays = this.configService.get<number>('API_KEY_LOG_RETENTION_DAYS', 90);
   }
@@ -36,8 +38,15 @@ export class ApiKeyRotationScheduler {
       } else {
         this.logger.log('No API keys required automatic rotation');
       }
+
+      await this.jobMonitoringService.recordScheduledExecution('api-key-rotation.auto-rotate', 'success', {
+        rotatedCount: results.length,
+      });
     } catch (error) {
       this.logger.error(`Automatic rotation failed: ${error.message}`);
+      await this.jobMonitoringService.recordScheduledExecution('api-key-rotation.auto-rotate', 'failed', {
+        message: error.message,
+      });
     }
   }
 
@@ -60,8 +69,15 @@ export class ApiKeyRotationScheduler {
       } else {
         this.logger.log('No API keys approaching rotation');
       }
+
+      await this.jobMonitoringService.recordScheduledExecution('api-key-rotation.warning-check', 'success', {
+        approachingCount: approachingKeys.length,
+      });
     } catch (error) {
       this.logger.error(`Rotation warning check failed: ${error.message}`);
+      await this.jobMonitoringService.recordScheduledExecution('api-key-rotation.warning-check', 'failed', {
+        message: error.message,
+      });
     }
   }
 
@@ -76,8 +92,14 @@ export class ApiKeyRotationScheduler {
     try {
       const deletedCount = await this.analyticsService.cleanupOldLogs(this.retentionDays);
       this.logger.log(`Cleaned up ${deletedCount} old usage log entries`);
+      await this.jobMonitoringService.recordScheduledExecution('api-key-rotation.log-cleanup', 'success', {
+        deletedCount,
+      });
     } catch (error) {
       this.logger.error(`Log cleanup failed: ${error.message}`);
+      await this.jobMonitoringService.recordScheduledExecution('api-key-rotation.log-cleanup', 'failed', {
+        message: error.message,
+      });
     }
   }
 }
