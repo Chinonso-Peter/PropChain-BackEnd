@@ -12,6 +12,7 @@ import { HealthModule } from './health/health.module';
 import { ConfigurationModule } from './config/configuration.module';
 import configuration from './config/configuration';
 import valuationConfig from './config/valuation.config';
+import observabilityConfig from './config/observability.config';
 
 // Caching
 import { CacheModule } from './common/cache/cache.module';
@@ -72,7 +73,7 @@ import { ObservabilityModule } from './observability/observability.module';
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration, valuationConfig],
+      load: [configuration, valuationConfig, observabilityConfig],
       envFilePath: [
         `.env.${process.env.NODE_ENV || 'development'}.local`,
         `.env.${process.env.NODE_ENV || 'development'}`,
@@ -106,6 +107,9 @@ import { ObservabilityModule } from './observability/observability.module';
     PrismaModule,
     HealthModule,
     RedisModule,
+
+    // Observability
+    ObservabilityModule,
 
     // Security & rate limiting
     ThrottlerModule.forRootAsync({
@@ -145,7 +149,6 @@ import { ObservabilityModule } from './observability/observability.module';
     // Compliance & Security
     AuditModule,
     RbacModule,
-    ObservabilityModule,
 
     // API Versioning
     ApiVersionModule,
