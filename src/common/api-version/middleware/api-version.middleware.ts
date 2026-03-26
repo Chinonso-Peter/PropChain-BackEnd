@@ -28,9 +28,9 @@ export const VERSION_HEADER = 'Accept-Version';
 export const VERSION_QUERY_PARAM = 'version';
 
 /**
- * Path pattern to extract version from URL
+ * Path pattern to extract version from URL (matches /v1.0/ or /v1.0 at start or after /)
  */
-const VERSION_PATH_PATTERN = /^\/v(\d+\.\d+)/;
+const VERSION_PATH_PATTERN = /\/v(\d+\.\d+)(?:\/|$)/;
 
 @Injectable()
 export class ApiVersionMiddleware implements NestMiddleware {
@@ -92,7 +92,7 @@ export class ApiVersionMiddleware implements NestMiddleware {
    */
   private extractFromPath(path: string): string | null {
     const match = path.match(VERSION_PATH_PATTERN);
-    return match ? `1.${match[1]}` : null;
+    return match ? match[1] : null;
   }
 
   /**

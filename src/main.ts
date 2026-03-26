@@ -10,6 +10,7 @@ import { ErrorResponseDto } from './common/errors/error.dto';
 import { SecurityHeadersService } from './security/services/security-headers.service';
 import { DEFAULT_API_VERSION } from './common/api-version';
 import { CorsOriginValidator } from './config/utils/cors-origin.validator';
+import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -93,7 +94,7 @@ async function bootstrap() {
 
   logger.log(`CORS configured with origins: ${corsOrigins.join(', ')}`);
 
-  // Global pipes
+  app.useGlobalFilters(new ValidationExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -125,10 +126,20 @@ async function bootstrap() {
       .setTitle('PropChain API')
       .setDescription('Decentralized Real Estate Infrastructure - Backend API')
       .setVersion(DEFAULT_API_VERSION)
-      .addTag('properties')
-      .addTag('transactions')
-      .addTag('users')
-      .addTag('blockchain')
+      .addTag('auth', 'Authentication and Authorization')
+      .addTag('users', 'User management and profiles')
+      .addTag('properties', 'Property listings and management')
+      .addTag('transactions', 'Escrowed real estate transactions')
+      .addTag('valuation', 'Automated property valuation and market trends')
+      .addTag('documents', 'Secure document storage and versioning')
+      .addTag('blockchain', 'Web3 and smart contract interactions')
+      .addTag('Audit & Compliance', 'Regulatory auditing and compliance reporting')
+      .addTag('search', 'Advanced search across properties and users')
+      .addTag('security', 'Security headers and system safety')
+      .addTag('health', 'System health and status monitoring')
+      .addTag('backup-recovery', 'Disaster recovery and backup management')
+      .addTag('API Keys', 'Key management for external integrations')
+      .addTag('feature-flags', 'Dynamic feature toggles')
       .addBearerAuth()
       .addApiKey({ type: 'apiKey', name: 'X-API-KEY', in: 'header' }, 'apiKey')
       .addApiKey({ type: 'apiKey', name: 'Accept-Version', in: 'header' }, 'version')
@@ -141,6 +152,12 @@ async function bootstrap() {
       customSiteTitle: 'PropChain API Documentation',
       customCss: '.swagger-ui .topbar { display: none }',
       customfavIcon: '/favicon.ico',
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'none',
+        filter: true,
+        showRequestDuration: true,
+      },
     });
 
     logger.log(`Swagger documentation available at /${apiPrefix}/docs`);

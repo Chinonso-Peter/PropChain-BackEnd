@@ -50,6 +50,7 @@ model User {
   userRole             Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
   roleChanges          RoleChangeLog[]
   documents            Document[]
+  exportJobs           ExportJob[]
 
   // Indexes for common query patterns
   @@index([email]) // For searching users by email
@@ -444,4 +445,32 @@ model PasswordHistory {
   @@index([userId])
   @@index([createdAt])
   @@map("password_history")
+}
+
+model ExportJob {
+  id           String     @id @default(cuid())
+  userId       String     @map("user_id")
+  dataType     String     @map("data_type")
+  format       String
+  status       String     @default("pending")
+  downloadUrl  String?    @map("download_url")
+  startDate    DateTime?  @map("start_date")
+  endDate      DateTime?  @map("end_date")
+  fields       Json?      // Array of field names
+  filters      Json?      // Export filters
+  totalRecords Int        @default(0) @map("total_records")
+  fileSize     Int?       @map("file_size")
+  errorMessage  String?    @map("error_message")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  startedAt    DateTime?  @map("started_at")
+  completedAt  DateTime?  @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([dataType])
+  @@index([createdAt])
+  @@index([completedAt])
+  @@map("export_jobs")
 }

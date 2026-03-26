@@ -1,9 +1,15 @@
-import { Controller, Get, Post, Param, Body, ValidationPipe, HttpCode, HttpStatus, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Param, Body, ValidationPipe, HttpCode, HttpStatus, Logger, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { ValuationService } from './valuation.service';
-import { PropertyFeatures, ValuationResult } from './valuation.types';
+import { ValuationResult } from './valuation.types';
+import { PropertyFeaturesDto } from './dto/property-features.dto';
+import { BatchValuationRequestDto } from './dto/batch-valuation-request.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiStandardErrorResponse } from '../common/errors/api-standard-error-response.decorator';
 
 @ApiTags('valuation')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('valuation')
 export class ValuationController {
   private readonly logger = new Logger(ValuationController.name);
@@ -13,14 +19,13 @@ export class ValuationController {
   @Post(':propertyId')
   @ApiOperation({ summary: 'Get property valuation' })
   @ApiParam({ name: 'propertyId', description: 'ID of the property to value' })
-  @ApiBody({ description: 'Property features for valuation', required: false })
+  @ApiBody({ type: PropertyFeaturesDto, description: 'Property features for valuation', required: false })
   @ApiResponse({ status: 200, description: 'Property valuation successful' })
-  @ApiResponse({ status: 404, description: 'Property not found' })
-  @ApiResponse({ status: 422, description: 'Invalid property features' })
+  @ApiStandardErrorResponse([400, 401, 404, 422])
   @HttpCode(HttpStatus.OK)
   async getValuation(
     @Param('propertyId') propertyId: string,
-    @Body(ValidationPipe) features?: PropertyFeatures,
+    @Body() features?: PropertyFeaturesDto,
   ): Promise<ValuationResult> {
     this.logger.log(`Requesting valuation for property ${propertyId}`);
     return this.valuationService.getValuation(propertyId, features);
@@ -30,7 +35,7 @@ export class ValuationController {
   @ApiOperation({ summary: 'Get property valuation history' })
   @ApiParam({ name: 'propertyId', description: 'ID of the property' })
   @ApiResponse({ status: 200, description: 'Property valuation history retrieved' })
-  @ApiResponse({ status: 404, description: 'Property not found' })
+  @ApiStandardErrorResponse([401, 404])
   async getPropertyHistory(@Param('propertyId') propertyId: string): Promise<ValuationResult[]> {
     this.logger.log(`Requesting valuation history for property ${propertyId}`);
     return this.valuationService.getPropertyHistory(propertyId);
@@ -38,19 +43,19 @@ export class ValuationController {
 
   @Get('trends/:location')
   @ApiOperation({ summary: 'Get market trend analysis for a location' })
-  @ApiParam({ name: 'location', description: 'Location to analyze market trends' })
+  @ApiParam({ name: 'location', description: 'Location (address or ZIP) to analyze market trends' })
   @ApiResponse({ status: 200, description: 'Market trend analysis retrieved' })
-  @ApiResponse({ status: 404, description: 'Location not found in records' })
+  @ApiStandardErrorResponse([400, 401, 404])
   async getMarketTrendAnalysis(@Param('location') location: string) {
     this.logger.log(`Requesting market trend analysis for location ${location}`);
     return this.valuationService.getMarketTrendAnalysis(location);
   }
 
   @Get(':propertyId/latest')
-  @ApiOperation({ summary: 'Get latest valuation for a property' })
+  @ApiOperation({ summary: 'Get latest valuation for a property', description: 'Retrieves the most recent valuation from history.' })
   @ApiParam({ name: 'propertyId', description: 'ID of the property' })
   @ApiResponse({ status: 200, description: 'Latest valuation retrieved' })
-  @ApiResponse({ status: 404, description: 'Property not found' })
+  @ApiStandardErrorResponse([401, 404])
   async getLatestValuation(@Param('propertyId') propertyId: string): Promise<ValuationResult> {
     const history = await this.valuationService.getPropertyHistory(propertyId);
     if (history.length === 0) {
@@ -60,29 +65,13 @@ export class ValuationController {
   }
 
   @Post('batch')
-  @ApiOperation({ summary: 'Get valuations for multiple properties' })
-  @ApiBody({
-    description: 'Array of property IDs and features',
-    schema: {
-      type: 'object',
-      properties: {
-        properties: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              propertyId: { type: 'string' },
-              features: { $ref: '#/components/schemas/PropertyFeatures' },
-            },
-          },
-        },
-      },
-    },
-  })
-  @ApiResponse({ status: 200, description: 'Batch valuations retrieved' })
+  @ApiOperation({ summary: 'Get valuations for multiple properties', description: 'Processes a batch of property IDs and optional features for valuation.' })
+  @ApiBody({ type: BatchValuationRequestDto })
+  @ApiResponse({ status: 200, description: 'Batch valuations processed.' })
+  @ApiStandardErrorResponse([400, 401])
   @HttpCode(HttpStatus.OK)
   async getBatchValuations(
-    @Body() requestBody: { properties: Array<{ propertyId: string; features?: PropertyFeatures }> },
+    @Body() requestBody: BatchValuationRequestDto,
   ) {
     const results = [];
     for (const item of requestBody.properties) {

@@ -86,9 +86,45 @@ export class EmailQueueService implements OnModuleDestroy {
   }
 
   /**
-   * Add batch email job
+   * Add batch email job with intelligent batching
    */
   async addBatch(batchData: BatchEmailJobData): Promise<string> {
+    const emails = batchData.emails;
+    const optimalBatchSize = this.configService.get<number>('EMAIL_OPTIMAL_BATCH_SIZE', 100);
+    
+    // If batch is too large, split into smaller batches for better performance
+    if (emails.length > optimalBatchSize) {
+      const batches: BatchEmailJobData[] = [];
+      
+      for (let i = 0; i < emails.length; i += optimalBatchSize) {
+        const batch = emails.slice(i, i + optimalBatchSize);
+        batches.push({
+          ...batchData,
+          emails: batch,
+        });
+      }
+      
+      // Add all batches to queue
+      const jobIds = await Promise.all(
+        batches.map(batch => 
+          this.add('batch', batch, {
+            attempts: 2,
+            backoff: 'fixed',
+            delay: 0,
+            priority: 5, // Lower priority for large batches
+          })
+        )
+      );
+      
+      this.logger.log(`Split large batch into ${batches.length} smaller batches`, {
+        totalEmails: emails.length,
+        batchSize: optimalBatchSize,
+        jobIds: jobIds.length,
+      });
+      
+      return jobIds[0]; // Return first job ID as reference
+    }
+    
     return this.add('batch', batchData, {
       attempts: 2,
       backoff: 'fixed',
@@ -330,7 +366,7 @@ export class EmailQueueService implements OnModuleDestroy {
   }
 
   /**
-   * Process batch email job
+   * Process batch email job with optimized concurrency
    */
   private async processBatchEmail(jobData: BatchEmailJobData): Promise<EmailJobResult> {
     const { emails, options } = jobData;
@@ -338,26 +374,40 @@ export class EmailQueueService implements OnModuleDestroy {
     let successCount = 0;
     let failureCount = 0;
 
-    for (const email of emails) {
-      try {
-        const result = await this.processSingleEmail({ type: 'single', data: email });
-        results.push(result);
-
-        if (result.success) {
-          successCount++;
-        } else {
+    // Optimize batch size based on configuration
+    const maxConcurrency = options?.maxConcurrency || this.configService.get<number>('EMAIL_BATCH_MAX_CONCURRENCY', 10);
+    const batchSize = Math.min(emails.length, maxConcurrency);
+    
+    // Process emails in concurrent batches for better performance
+    for (let i = 0; i < emails.length; i += batchSize) {
+      const batch = emails.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (email, index) => {
+        try {
+          const result = await this.processSingleEmail({ type: 'single', data: email });
+          
+          if (result.success) {
+            successCount++;
+          } else {
+            failureCount++;
+          }
+          
+          return result;
+        } catch (error) {
           failureCount++;
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          };
         }
-
-        if (options?.rateLimit) {
-          await this.delay(options.rateLimit);
-        }
-      } catch (error) {
-        failureCount++;
-        results.push({
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      // Apply rate limiting between batches if specified
+      if (options?.rateLimit && i + batchSize < emails.length) {
+        await this.delay(options.rateLimit);
       }
     }
 

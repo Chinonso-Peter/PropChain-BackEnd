@@ -4,6 +4,7 @@ import * as nodemailer from 'nodemailer';
 import { EmailTemplateService } from './email.template';
 import { EmailAnalyticsService } from './email.analytics';
 import { EmailQueueService } from './email.queue';
+import { EmailDeliveryTrackingService } from './email.delivery-tracking';
 
 /**
  * Email Service
@@ -21,6 +22,7 @@ export class EmailService {
     private readonly templateService: EmailTemplateService,
     private readonly analyticsService: EmailAnalyticsService,
     private readonly queueService: EmailQueueService,
+    private readonly deliveryTrackingService: EmailDeliveryTrackingService,
   ) {
     this.initializeProviders();
   }
@@ -100,16 +102,27 @@ export class EmailService {
   }
 
   /**
-   * Send email directly
+   * Send email directly with enhanced tracking
    */
   async sendEmail(emailData: EmailData, metadata?: EmailMetadata): Promise<EmailSendResult> {
     const emailId = this.generateEmailId();
     const provider = this.selectProvider(emailData);
 
+    // Initialize delivery tracking
+    this.deliveryTrackingService.initializeTracking(emailId, provider.name, emailData.to);
+
     try {
       const result = await provider.send({
         ...emailData,
         messageId: emailId,
+      });
+
+      // Update tracking for successful send
+      emailData.to.forEach(recipient => {
+        this.deliveryTrackingService.updateDeliveryStatus(emailId, recipient, 'sent', {
+          provider: provider.name,
+          messageId: result.messageId,
+        });
       });
 
       return {
@@ -122,6 +135,14 @@ export class EmailService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Update tracking for failed send
+      emailData.to.forEach(recipient => {
+        this.deliveryTrackingService.updateDeliveryStatus(emailId, recipient, 'failed', {
+          provider: provider.name,
+          error: errorMessage,
+        });
+      });
 
       return {
         emailId,
@@ -440,32 +461,38 @@ export class EmailService {
   }
 
   /**
-   * Test email configuration
+   * Get email delivery status
    */
-  async testConfiguration(): Promise<EmailTestResult> {
-    try {
-      const testEmail = {
-        to: [this.configService.get<string>('EMAIL_TEST_TO')],
-        subject: 'PropChain Email Test',
-        html: '<h1>Email Configuration Test</h1><p>This is a test email from PropChain.</p>',
-        text: 'Email Configuration Test\n\nThis is a test email from PropChain.',
-      };
+  getEmailDeliveryStatus(emailId: string): any {
+    return this.deliveryTrackingService.getDeliveryStatus(emailId);
+  }
 
-      const result = await this.sendEmail(testEmail);
+  /**
+   * Get delivery statistics
+   */
+  getDeliveryStatistics(timeRange?: TimeRange): any {
+    return this.deliveryTrackingService.getDeliveryStats(timeRange);
+  }
 
-      return {
-        success: result.status === 'sent',
-        provider: result.provider,
-        messageId: result.messageId,
-        error: result.error,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        provider: 'unknown',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+  /**
+   * Retry failed email deliveries
+   */
+  async retryFailedEmails(emailId: string): Promise<any> {
+    return this.deliveryTrackingService.retryFailedDeliveries(emailId);
+  }
+
+  /**
+   * Get template cache statistics
+   */
+  getTemplateCacheStats(): any {
+    return this.templateService.getCacheStats();
+  }
+
+  /**
+   * Warm up template cache
+   */
+  async warmupTemplateCache(locales?: string[]): Promise<void> {
+    return this.templateService.warmupCache(locales);
   }
 }
 
@@ -555,4 +582,9 @@ interface EmailTestResult {
   provider: string;
   messageId?: string;
   error?: string;
+}
+
+interface TimeRange {
+  start: Date;
+  end: Date;
 }

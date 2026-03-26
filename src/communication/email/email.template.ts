@@ -1,20 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
  * Email Template Service
  *
- * Handles dynamic email template rendering with personalization
+ * Handles dynamic email template rendering with personalization and caching
  */
 @Injectable()
 export class EmailTemplateService {
-  constructor(private readonly configService: ConfigService) {}
+  private readonly logger = new Logger(EmailTemplateService.name);
+  private readonly templateCache: Map<string, CachedTemplate> = new Map();
+  private readonly cacheTtlMs: number;
+  private readonly maxCacheSize: number;
+
+  constructor(private readonly configService: ConfigService) {
+    this.cacheTtlMs = this.configService.get<number>('EMAIL_TEMPLATE_CACHE_TTL_MS', 300000); // 5 minutes
+    this.maxCacheSize = this.configService.get<number>('EMAIL_TEMPLATE_MAX_CACHE_SIZE', 1000);
+    this.startCacheCleanup();
+  }
 
   /**
-   * Render email template with dynamic content
+   * Render email template with dynamic content and caching
    */
   renderTemplate(templateName: string, data: any, locale: string = 'en'): EmailTemplate {
+    const cacheKey = `${templateName}:${locale}`;
+    
+    // Try to get from cache first
+    const cachedTemplate = this.getCachedTemplate(cacheKey);
+    if (cachedTemplate) {
+      return {
+        subject: this.processStringTemplate(cachedTemplate.subject, data),
+        content: this.processStringTemplate(cachedTemplate.content, data),
+      };
+    }
+
+    // Get template and cache it
     const template = this.getTemplate(templateName, locale);
+    this.setCachedTemplate(cacheKey, template);
+    
     return {
       subject: this.processStringTemplate(template.subject, data),
       content: this.processStringTemplate(template.content, data),
@@ -335,6 +358,138 @@ export class EmailTemplateService {
       previewData: data,
     };
   }
+
+  /**
+   * Get cached template if valid
+   */
+  private getCachedTemplate(key: string): EmailTemplate | null {
+    const cached = this.templateCache.get(key);
+    if (!cached) {
+      return null;
+    }
+
+    // Check if cache is still valid
+    if (Date.now() - cached.timestamp > this.cacheTtlMs) {
+      this.templateCache.delete(key);
+      return null;
+    }
+
+    // Update access time for LRU
+    cached.lastAccessed = Date.now();
+    return cached.template;
+  }
+
+  /**
+   * Cache template with LRU eviction
+   */
+  private setCachedTemplate(key: string, template: EmailTemplate): void {
+    // Evict oldest if cache is full
+    if (this.templateCache.size >= this.maxCacheSize) {
+      this.evictOldestCacheEntry();
+    }
+
+    this.templateCache.set(key, {
+      template,
+      timestamp: Date.now(),
+      lastAccessed: Date.now(),
+    });
+  }
+
+  /**
+   * Evict oldest cache entry (LRU)
+   */
+  private evictOldestCacheEntry(): void {
+    let oldestKey = '';
+    let oldestTime = Date.now();
+
+    for (const [key, cached] of this.templateCache.entries()) {
+      if (cached.lastAccessed < oldestTime) {
+        oldestTime = cached.lastAccessed;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this.templateCache.delete(oldestKey);
+      this.logger.debug(`Evicted oldest template from cache: ${oldestKey}`);
+    }
+  }
+
+  /**
+   * Start periodic cache cleanup
+   */
+  private startCacheCleanup(): void {
+    const cleanupInterval = this.configService.get<number>('EMAIL_TEMPLATE_CACHE_CLEANUP_INTERVAL_MS', 60000); // 1 minute
+    
+    setInterval(() => {
+      this.cleanupExpiredCache();
+    }, cleanupInterval).unref?.();
+  }
+
+  /**
+   * Clean up expired cache entries
+   */
+  private cleanupExpiredCache(): void {
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    for (const [key, cached] of this.templateCache.entries()) {
+      if (now - cached.timestamp > this.cacheTtlMs) {
+        this.templateCache.delete(key);
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      this.logger.debug(`Cleaned up ${cleanedCount} expired template cache entries`);
+    }
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): TemplateCacheStats {
+    return {
+      size: this.templateCache.size,
+      maxSize: this.maxCacheSize,
+      ttlMs: this.cacheTtlMs,
+      hitRate: this.calculateHitRate(),
+    };
+  }
+
+  /**
+   * Clear template cache
+   */
+  clearCache(): void {
+    this.templateCache.clear();
+    this.logger.log('Template cache cleared');
+  }
+
+  /**
+   * Warm up cache with common templates
+   */
+  async warmupCache(locales: string[] = ['en']): Promise<void> {
+    const commonTemplates = ['welcome', 'email-verification', 'password-reset', 'login-alert'];
+    
+    for (const locale of locales) {
+      for (const templateName of commonTemplates) {
+        try {
+          this.getTemplate(templateName, locale);
+          this.logger.debug(`Warmed up cache for template: ${templateName}:${locale}`);
+        } catch (error) {
+          this.logger.warn(`Failed to warm up template ${templateName}:${locale}`, error);
+        }
+      }
+    }
+  }
+
+  private cacheHits = 0;
+  private cacheMisses = 0;
+
+  private calculateHitRate(): number {
+    const total = this.cacheHits + this.cacheMisses;
+    return total > 0 ? (this.cacheHits / total) * 100 : 0;
+  }
 }
 
 // Type definitions
@@ -349,4 +504,17 @@ interface EmailPreview {
   content: string;
   locale: string;
   previewData: any;
+}
+
+interface CachedTemplate {
+  template: EmailTemplate;
+  timestamp: number;
+  lastAccessed: number;
+}
+
+interface TemplateCacheStats {
+  size: number;
+  maxSize: number;
+  ttlMs: number;
+  hitRate: number;
 }

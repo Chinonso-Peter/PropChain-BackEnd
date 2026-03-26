@@ -1,4 +1,4 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, ClassSerializerInterceptor } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -12,6 +12,7 @@ import { HealthModule } from './health/health.module';
 import { ConfigurationModule } from './config/configuration.module';
 import configuration from './config/configuration';
 import valuationConfig from './config/valuation.config';
+import observabilityConfig from './config/observability.config';
 
 // Caching
 import { CacheModule } from './common/cache/cache.module';
@@ -57,6 +58,9 @@ import { FeatureFlagModule } from './feature-flags/feature-flag.module';
 // Static Cache
 import { StaticCacheModule } from './static-cache/static-cache.module';
 
+// Data Export
+import { ExportModule } from './export/export.module';
+
 // Middleware
 import { AuthRateLimitMiddleware } from './auth/middleware/auth.middleware';
 import { HeaderValidationMiddleware } from './security/middleware/header-validation.middleware';
@@ -70,7 +74,7 @@ import { BoundaryValidationModule } from './common/validation';
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration, valuationConfig],
+      load: [configuration, valuationConfig, observabilityConfig],
       envFilePath: [
         `.env.${process.env.NODE_ENV || 'development'}.local`,
         `.env.${process.env.NODE_ENV || 'development'}`,
@@ -105,6 +109,9 @@ import { BoundaryValidationModule } from './common/validation';
     PrismaModule,
     HealthModule,
     RedisModule,
+
+    // Observability
+    ObservabilityModule,
 
     // Security & rate limiting
     ThrottlerModule.forRootAsync({
@@ -144,7 +151,6 @@ import { BoundaryValidationModule } from './common/validation';
     // Compliance & Security
     AuditModule,
     RbacModule,
-    ObservabilityModule,
 
     // API Versioning
     ApiVersionModule,
@@ -155,11 +161,18 @@ import { BoundaryValidationModule } from './common/validation';
 
     // Static Cache
     StaticCacheModule,
+
+    // Data Export
+    ExportModule,
   ],
   controllers: [
     AuditController, // Add the audit controller
   ],
   providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ClassSerializerInterceptor,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestValidationInterceptor,
