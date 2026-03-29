@@ -7,6 +7,7 @@ import { IpBlockingService } from './services/ip-blocking.service';
 import { DdosProtectionService } from './services/ddos-protection.service';
 import { ApiQuotaService } from './services/api-quota.service';
 import { SecurityHeadersService } from './services/security-headers.service';
+import { CorsValidationService } from './services/cors-validation.service';
 import { InputSanitizationService } from './services/input-sanitization.service';
 import { FileValidationService } from './services/file-validation.service';
 import { MalwareScannerService } from './services/malware-scanner.service';
@@ -29,6 +30,7 @@ import { SensitiveEndpointRateLimitGuard } from './guards/sensitive-endpoint-rat
     DdosProtectionService,
     ApiQuotaService,
     SecurityHeadersService,
+    CorsValidationService,
     InputSanitizationService,
     FileValidationService,
     MalwareScannerService,
@@ -45,6 +47,7 @@ import { SensitiveEndpointRateLimitGuard } from './guards/sensitive-endpoint-rat
     DdosProtectionService,
     ApiQuotaService,
     SecurityHeadersService,
+    CorsValidationService,
     InputSanitizationService,
     FileValidationService,
     MalwareScannerService,

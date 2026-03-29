@@ -5,6 +5,12 @@ export interface JoiSchemaConfig {
   HOST: string;
   API_PREFIX: string;
   CORS_ORIGIN: string;
+  CORS_ALLOWED_ORIGINS: string;
+  CORS_CREDENTIALS_ENABLED: boolean;
+  CORS_ALLOWED_METHODS: string[];
+  CORS_ALLOWED_HEADERS: string[];
+  CORS_EXPOSED_HEADERS: string[];
+  CORS_MAX_AGE: number;
   SWAGGER_ENABLED: boolean;
 
   // Database

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+import { CorsValidationService } from '../src/security/services/cors-validation.service';
 
 // E2E test setup
 beforeAll(async () => {
@@ -30,6 +31,7 @@ afterAll(async () => {
             NODE_ENV: 'test',
             DATABASE_URL: process.env.DATABASE_URL,
             REDIS_URL: process.env.REDIS_URL,
+            CORS_ALLOWED_ORIGINS: 'http://localhost:3000,http://127.0.0.1:3000',
             JWT_SECRET: 'e2e-test-jwt-secret',
             JWT_EXPIRES_IN: '1h',
             S3_BUCKET: 'e2e-test-bucket',
@@ -40,15 +42,14 @@ afterAll(async () => {
       }),
       ...moduleImports,
     ],
+    providers: [CorsValidationService],
   }).compile();
 
   const app = moduleRef.createNestApplication();
 
   // Configure app for testing
-  app.enableCors({
-    origin: '*',
-    credentials: true,
-  });
+  const corsValidationService = app.get(CorsValidationService);
+  app.enableCors(corsValidationService.getNestCorsOptions());
 
   await app.init();
 

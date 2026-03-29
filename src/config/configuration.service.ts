@@ -26,6 +26,14 @@ export class ConfigurationService {
     return this.configService.get<string>('CORS_ORIGIN');
   }
 
+  get corsAllowedOrigins(): string {
+    return this.configService.get<string>('CORS_ALLOWED_ORIGINS');
+  }
+
+  get corsCredentialsEnabled(): boolean {
+    return this.configService.get<boolean>('CORS_CREDENTIALS_ENABLED');
+  }
+
   get swaggerEnabled(): boolean {
     return this.configService.get<boolean>('SWAGGER_ENABLED');
   }

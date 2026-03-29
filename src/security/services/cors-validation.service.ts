@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { CorsOptions } from 'cors';
 
 export interface CorsOriginConfig {
   allowedOrigins: Array<string | RegExp>;
@@ -17,29 +18,58 @@ export interface CorsOriginConfig {
 @Injectable()
 export class CorsValidationService {
   private readonly logger = new Logger(CorsValidationService.name);
-  private readonly allowedOrigins: Set<string>;
+  private readonly allowedOrigins: Array<string | RegExp>;
   private readonly isProduction: boolean;
+  private readonly isStaging: boolean;
   private readonly isDevelopment: boolean;
   private readonly isTest: boolean;
 
   constructor(private configService: ConfigService) {
     this.isProduction = this.configService.get('NODE_ENV') === 'production';
+    this.isStaging = this.configService.get('NODE_ENV') === 'staging';
     this.isDevelopment = this.configService.get('NODE_ENV') === 'development';
     this.isTest = this.configService.get('NODE_ENV') === 'test';
 
     // Parse and validate allowed origins
-    const originsConfig = this.configService.get<string>('CORS_ALLOWED_ORIGINS', '');
+    const originsConfig = this.getConfiguredOrigins();
     this.allowedOrigins = this.parseAllowedOrigins(originsConfig);
 
     // Log configuration on startup
     this.logConfiguration();
   }
 
+  getNestCorsOptions(): CorsOptions {
+    const config = this.getCorsConfig();
+
+    return {
+      origin: (requestOrigin, callback) => {
+        if (!requestOrigin) {
+          callback(null, true);
+          return;
+        }
+
+        const allowed = this.isOriginAllowed(requestOrigin);
+        if (!allowed) {
+          this.logger.warn(`Blocked CORS request from unauthorized origin: ${requestOrigin}`);
+        }
+
+        callback(null, allowed);
+      },
+      credentials: config.allowCredentials,
+      methods: config.allowedMethods,
+      allowedHeaders: config.allowedHeaders,
+      exposedHeaders: config.exposedHeaders,
+      maxAge: config.maxAge,
+      optionsSuccessStatus: 204,
+      preflightContinue: false,
+    };
+  }
+
   /**
    * Get CORS configuration based on environment
    */
   getCorsConfig(): CorsOriginConfig {
-    if (this.isProduction) {
+    if (this.isProduction || this.isStaging) {
       return this.getProductionCorsConfig();
     } else if (this.isTest) {
       return this.getTestCorsConfig();
@@ -53,26 +83,21 @@ export class CorsValidationService {
    */
   isOriginAllowed(origin: string): boolean {
     if (!origin) {
-      return false;
+      return true;
     }
 
-    // In production, strictly validate against allowlist
-    if (this.isProduction) {
-      return this.allowedOrigins.has(origin);
-    }
-
-    // In development/test, be more permissive but still validate
-    if (this.isDevelopment || this.isTest) {
-      // Allow localhost variations in development
-      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-        return true;
+    const normalizedOrigin = this.normalizeOrigin(origin);
+    return this.allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin === '*') {
+        return !this.isProduction && !this.isStaging;
       }
 
-      // Also check allowlist
-      return this.allowedOrigins.has(origin);
-    }
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(normalizedOrigin);
+      }
 
-    return false;
+      return this.normalizeOrigin(allowedOrigin) === normalizedOrigin;
+    });
   }
 
   /**
@@ -81,13 +106,7 @@ export class CorsValidationService {
    */
   getOriginValidator(): (origin: string) => boolean {
     return (origin: string) => {
-      const allowed = this.isOriginAllowed(origin);
-
-      if (!allowed && origin) {
-        this.logger.warn(`Blocked CORS request from unauthorized origin: ${origin}`);
-      }
-
-      return allowed;
+      return this.isOriginAllowed(origin);
     };
   }
 
@@ -98,18 +117,22 @@ export class CorsValidationService {
     const errors: string[] = [];
 
     // Production must have explicit origins configured
-    if (this.isProduction) {
-      if (this.allowedOrigins.size === 0) {
-        errors.push('CORS_ALLOWED_ORIGINS must be configured in production');
+    if (this.isProduction || this.isStaging) {
+      if (this.allowedOrigins.length === 0) {
+        errors.push('CORS_ALLOWED_ORIGINS or CORS_ORIGIN must be configured in production/staging');
       }
 
       // Check for wildcard in production
-      if (this.allowedOrigins.has('*')) {
-        errors.push('Wildcard (*) CORS origin is not allowed in production');
+      if (this.allowedOrigins.some(origin => origin === '*')) {
+        errors.push('Wildcard (*) CORS origin is not allowed in production/staging');
       }
 
       // Validate each origin URL format
       for (const origin of this.allowedOrigins) {
+        if (origin instanceof RegExp) {
+          continue;
+        }
+
         if (!this.isValidOriginUrl(origin)) {
           errors.push(`Invalid origin URL format: ${origin}`);
         }
@@ -123,7 +146,7 @@ export class CorsValidationService {
 
     // Development warnings
     if (this.isDevelopment) {
-      if (this.allowedOrigins.has('*')) {
+      if (this.allowedOrigins.some(origin => origin === '*')) {
         this.logger.warn(
           'CORS wildcard (*) is enabled in development. This is acceptable for local development but should be disabled in production.',
         );
@@ -146,10 +169,12 @@ export class CorsValidationService {
     hasLocalhost: boolean;
   } {
     return {
-      totalOrigins: this.allowedOrigins.size,
+      totalOrigins: this.allowedOrigins.length,
       isProduction: this.isProduction,
-      isWildcard: this.allowedOrigins.has('*'),
-      hasLocalhost: Array.from(this.allowedOrigins).some(o => o.includes('localhost') || o.includes('127.0.0.1')),
+      isWildcard: this.allowedOrigins.some(origin => origin === '*'),
+      hasLocalhost: this.allowedOrigins.some(origin =>
+        typeof origin === 'string' ? origin.includes('localhost') || origin.includes('127.0.0.1') : false,
+      ),
     };
   }
 
@@ -165,7 +190,7 @@ export class CorsValidationService {
     }
 
     return {
-      allowedOrigins: Array.from(this.allowedOrigins),
+      allowedOrigins: [...this.allowedOrigins],
       allowCredentials: this.configService.get<boolean>('CORS_CREDENTIALS_ENABLED', true),
       allowedMethods: this.configService.get<string[]>('CORS_ALLOWED_METHODS', [
         'GET',
@@ -182,7 +207,11 @@ export class CorsValidationService {
         'x-correlation-id',
         'Accept-Version',
       ]),
-      exposedHeaders: this.configService.get<string[]>('CORS_EXPOSED_HEADERS', ['x-correlation-id', 'x-request-id']),
+      exposedHeaders: this.configService.get<string[]>('CORS_EXPOSED_HEADERS', [
+        'x-correlation-id',
+        'x-request-id',
+        'Retry-After',
+      ]),
       maxAge: this.configService.get<number>('CORS_MAX_AGE', 86400), // 24 hours
     };
   }
@@ -192,12 +221,13 @@ export class CorsValidationService {
    */
   private getDevelopmentCorsConfig(): CorsOriginConfig {
     // If specific origins are configured, use them
-    if (this.allowedOrigins.size > 0 && !this.allowedOrigins.has('*')) {
+    if (this.allowedOrigins.length > 0 && !this.allowedOrigins.some(origin => origin === '*')) {
       return {
-        allowedOrigins: Array.from(this.allowedOrigins),
+        allowedOrigins: [...this.allowedOrigins],
         allowCredentials: true,
         allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'Accept-Version'],
+        exposedHeaders: ['x-correlation-id', 'x-request-id'],
         maxAge: 3600, // 1 hour
       };
     }
@@ -207,7 +237,8 @@ export class CorsValidationService {
       allowedOrigins: [/^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/],
       allowCredentials: true,
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'Accept-Version'],
+      exposedHeaders: ['x-correlation-id', 'x-request-id'],
       maxAge: 3600,
     };
   }
@@ -220,7 +251,8 @@ export class CorsValidationService {
       allowedOrigins: ['*'],
       allowCredentials: false,
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id'],
+      exposedHeaders: ['x-correlation-id'],
       maxAge: 3600,
     };
   }
@@ -228,8 +260,8 @@ export class CorsValidationService {
   /**
    * Parse allowed origins from configuration string
    */
-  private parseAllowedOrigins(originsConfig: string): Set<string> {
-    const origins = new Set<string>();
+  private parseAllowedOrigins(originsConfig: string): Array<string | RegExp> {
+    const origins: Array<string | RegExp> = [];
 
     if (!originsConfig || originsConfig.trim() === '') {
       return origins;
@@ -241,15 +273,25 @@ export class CorsValidationService {
     for (const origin of originList) {
       if (origin && origin !== '*') {
         // Remove trailing slashes
-        const normalizedOrigin = origin.replace(/\/$/, '');
-        origins.add(normalizedOrigin);
-      } else if (origin === '*' && !this.isProduction) {
+        const normalizedOrigin = this.normalizeOrigin(origin);
+        if (!origins.includes(normalizedOrigin)) {
+          origins.push(normalizedOrigin);
+        }
+      } else if (origin === '*' && !this.isProduction && !this.isStaging) {
         // Only allow wildcard in non-production
-        origins.add('*');
+        origins.push('*');
       }
     }
 
     return origins;
+  }
+
+  private getConfiguredOrigins(): string {
+    return this.configService.get<string>('CORS_ALLOWED_ORIGINS') || this.configService.get<string>('CORS_ORIGIN', '');
+  }
+
+  private normalizeOrigin(origin: string): string {
+    return origin.replace(/\/$/, '');
   }
 
   /**
@@ -271,10 +313,10 @@ export class CorsValidationService {
   private logConfiguration(): void {
     const stats = this.getStats();
 
-    if (this.isProduction) {
-      this.logger.log(`🔒 Production CORS configured with ${stats.totalOrigins} allowed origin(s)`);
+    if (this.isProduction || this.isStaging) {
+      this.logger.log(`🔒 Production-like CORS configured with ${stats.totalOrigins} allowed origin(s)`);
       if (stats.totalOrigins > 0) {
-        this.logger.debug(`Allowed origins: ${Array.from(this.allowedOrigins).join(', ')}`);
+        this.logger.debug(`Allowed origins: ${this.describeAllowedOrigins()}`);
       }
     } else if (this.isDevelopment) {
       if (stats.isWildcard) {
@@ -285,5 +327,11 @@ export class CorsValidationService {
     } else {
       this.logger.log(`🧪 Test CORS configured`);
     }
+  }
+
+  private describeAllowedOrigins(): string {
+    return this.allowedOrigins
+      .map(origin => (origin instanceof RegExp ? origin.toString() : origin))
+      .join(', ');
   }
 }
