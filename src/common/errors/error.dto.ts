@@ -57,6 +57,13 @@ export class ErrorResponseDto {
   })
   requestId?: string;
 
+  @ApiProperty({
+    description: 'Correlation identifier used across logs and downstream tracing',
+    example: 'corr_abc123xyz',
+    required: false,
+  })
+  correlationId?: string;
+
   constructor(partial: Partial<ErrorResponseDto>) {
     Object.assign(this, partial);
     this.timestamp = this.timestamp || new Date().toISOString();

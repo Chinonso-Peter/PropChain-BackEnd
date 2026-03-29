@@ -10,7 +10,6 @@ import { ErrorResponseDto } from './common/errors/error.dto';
 import { SecurityHeadersService } from './security/services/security-headers.service';
 import { DEFAULT_API_VERSION } from './common/api-version';
 import { CorsOriginValidator } from './config/utils/cors-origin.validator';
-import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
 import { DataSource } from 'typeorm';
 import { connectWithRetry } from './database/retry-connection';
 
@@ -88,8 +87,7 @@ async function bootstrap() {
   });
   logger.log(`CORS configured with origins: ${corsOrigins.join(', ')}`);
 
-  // Global filters & pipes
-  app.useGlobalFilters(new ValidationExceptionFilter());
+  // Global pipes
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
