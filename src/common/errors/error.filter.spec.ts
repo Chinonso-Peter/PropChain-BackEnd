@@ -14,6 +14,7 @@ describe('AppExceptionFilter', () => {
   const mockResponse = {
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
+    setHeader: jest.fn(),
   };
 
   const mockRequest = {
@@ -21,6 +22,7 @@ describe('AppExceptionFilter', () => {
     method: 'GET',
     ip: '127.0.0.1',
     connection: { remoteAddress: '127.0.0.1' },
+    headers: {},
   };
 
   const mockArgumentsHost = {
@@ -36,13 +38,19 @@ describe('AppExceptionFilter', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue('development'),
+            get: jest.fn().mockImplementation((key: string, defaultValue?: unknown) => {
+              if (key === 'NODE_ENV') {
+                return 'development';
+              }
+              return defaultValue;
+            }),
           },
         },
         {
           provide: StructuredLoggerService,
           useValue: {
             error: jest.fn(),
+            warn: jest.fn(),
           },
         },
         {
@@ -80,8 +88,12 @@ describe('AppExceptionFilter', () => {
       expect.objectContaining({
         statusCode: status,
         message,
-        errorCode: ErrorCode.BAD_REQUEST,
         path: mockRequest.url,
+        requestId: expect.any(String),
+        correlationId: expect.any(String),
+        error: expect.objectContaining({
+          code: ErrorCode.BAD_REQUEST,
+        }),
       }),
     );
   });
@@ -98,8 +110,10 @@ describe('AppExceptionFilter', () => {
       expect.objectContaining({
         statusCode: status,
         message: 'The provided data is invalid',
-        errorCode: ErrorCode.VALIDATION_ERROR,
-        details: validationErrors,
+        error: expect.objectContaining({
+          code: ErrorCode.VALIDATION_ERROR,
+          details: validationErrors,
+        }),
       }),
     );
   });
@@ -114,9 +128,40 @@ describe('AppExceptionFilter', () => {
       expect.objectContaining({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: 'An unexpected error occurred. Please try again later',
-        errorCode: ErrorCode.INTERNAL_SERVER_ERROR,
+        error: expect.objectContaining({
+          code: ErrorCode.INTERNAL_SERVER_ERROR,
+        }),
       }),
     );
     expect(loggerService.error).toHaveBeenCalled();
+  });
+
+  it('should preserve correlation id and redact internal details in production', () => {
+    jest.spyOn(configService, 'get').mockImplementation((key: string, defaultValue?: unknown) => {
+      if (key === 'NODE_ENV') {
+        return 'production';
+      }
+      return defaultValue;
+    });
+
+    const productionRequest = {
+      ...mockRequest,
+      headers: {
+        'x-correlation-id': 'corr-123',
+      },
+    };
+    (mockArgumentsHost.getRequest as jest.Mock).mockReturnValueOnce(productionRequest);
+
+    filter.catch(new Error('database password leaked'), mockArgumentsHost);
+
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correlationId: 'corr-123',
+        error: expect.objectContaining({
+          code: ErrorCode.INTERNAL_SERVER_ERROR,
+          details: undefined,
+        }),
+      }),
+    );
   });
 });

@@ -13,6 +13,7 @@ import { FileValidationService } from './services/file-validation.service';
 import { MalwareScannerService } from './services/malware-scanner.service';
 import { SecureFileValidator } from './validators/secure-file.validator';
 import { HeaderValidationMiddleware } from './middleware/header-validation.middleware';
+import { RateLimitMiddleware } from './middleware/rate-limit.middleware';
 import { SecurityController } from './security.controller';
 import { RateLimitAnalyticsController } from './controllers/rate-limit-analytics.controller';
 import { UserTierManagementController } from './controllers/user-tier-management.controller';
@@ -35,6 +36,7 @@ import { SensitiveEndpointRateLimitGuard } from './guards/sensitive-endpoint-rat
     MalwareScannerService,
     SecureFileValidator,
     HeaderValidationMiddleware,
+    RateLimitMiddleware,
     AdvancedRateLimitGuard,
     SensitiveEndpointRateLimitGuard,
   ],
@@ -51,6 +53,7 @@ import { SensitiveEndpointRateLimitGuard } from './guards/sensitive-endpoint-rat
     MalwareScannerService,
     SecureFileValidator,
     HeaderValidationMiddleware,
+    RateLimitMiddleware,
     AdvancedRateLimitGuard,
     SensitiveEndpointRateLimitGuard,
   ],

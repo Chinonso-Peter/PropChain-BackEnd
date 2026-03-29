@@ -11,6 +11,7 @@ import { SecurityHeadersService } from './security/services/security-headers.ser
 import { CorsValidationService } from './security/services/cors-validation.service';
 import { DEFAULT_API_VERSION } from './common/api-version';
 import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
+import { CorsOriginValidator } from './config/utils/cors-origin.validator';
 import { DataSource } from 'typeorm';
 import { connectWithRetry } from './database/retry-connection';
 
@@ -84,8 +85,7 @@ async function bootstrap() {
     `CORS configured for ${corsConfig.allowedOrigins.length} origin rule(s); credentials=${String(corsConfig.allowCredentials)}`,
   );
 
-  // Global filters & pipes
-  app.useGlobalFilters(new ValidationExceptionFilter());
+  // Global pipes
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

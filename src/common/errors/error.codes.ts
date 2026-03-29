@@ -15,6 +15,7 @@ export enum ErrorCode {
   MISSING_REQUIRED_FIELD = 'MISSING_REQUIRED_FIELD',
   INVALID_FORMAT = 'INVALID_FORMAT',
   UNPROCESSABLE_ENTITY = 'UNPROCESSABLE_ENTITY',
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
 
   // =========================
   // Authentication
@@ -78,6 +79,7 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.MISSING_REQUIRED_FIELD]: 'Required field is missing',
   [ErrorCode.INVALID_FORMAT]: 'The data format is incorrect',
   [ErrorCode.UNPROCESSABLE_ENTITY]: 'The request was well-formed but could not be processed',
+  [ErrorCode.RATE_LIMIT_EXCEEDED]: 'Too many requests. Please try again later',
 
   // Authentication
   [ErrorCode.UNAUTHORIZED]: 'You are not authorized to access this resource',
