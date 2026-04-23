@@ -8,6 +8,7 @@ import { TrustScoreModule } from './trust-score/trust-score.module';
 import { PropertiesModule } from './properties/properties.module';
 import { PrismaModule } from './database/prisma.module';
 import { VersioningModule } from './versioning/versioning.module';
+import { ApiDocumentationModule } from './config/api-documentation.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -18,6 +19,7 @@ import { AppController } from './app.controller';
     }),
     PrismaModule,
     VersioningModule,
+    ApiDocumentationModule,
     UsersModule,
     AuthModule,
     DashboardModule,
