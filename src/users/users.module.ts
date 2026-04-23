@@ -1,19 +1,21 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { AvatarUploadController } from './avatar-upload.controller';
-import { AvatarUploadService } from './avatar-upload.service';
-import { ScheduledDeletionService } from './scheduled-deletion.service';
-import { UserImportController } from './user-import.controller';
-import { UserImportService } from './user-import.service';
+import { UserPreferencesService } from './user-preferences.service';
+import { UserPreferencesController } from './user-preferences.controller';
+import { ActivityLogService } from './activity-log.service';
+import { ActivityLogController, AdminActivityLogController } from './activity-log.controller';
 import { PrismaModule } from '../database/prisma.module';
-import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ScheduleModule.forRoot()],
-  controllers: [UsersController, AvatarUploadController, UserImportController],
-  providers: [UsersService, AvatarUploadService, ScheduledDeletionService, UserImportService],
-  exports: [UsersService, AvatarUploadService, ScheduledDeletionService, UserImportService],
+  imports: [PrismaModule],
+  controllers: [
+    UsersController,
+    UserPreferencesController,
+    ActivityLogController,
+    AdminActivityLogController,
+  ],
+  providers: [UsersService, UserPreferencesService, ActivityLogService],
+  exports: [UsersService, UserPreferencesService, ActivityLogService],
 })
 export class UsersModule {}
