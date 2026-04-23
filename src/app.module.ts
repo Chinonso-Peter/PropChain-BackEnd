@@ -7,6 +7,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { TrustScoreModule } from './trust-score/trust-score.module';
 import { PropertiesModule } from './properties/properties.module';
 import { PrismaModule } from './database/prisma.module';
+import { VersioningModule } from './versioning/versioning.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -16,6 +17,7 @@ import { AppController } from './app.controller';
       envFilePath: ['.env.local', '.env'],
     }),
     PrismaModule,
+    VersioningModule,
     UsersModule,
     AuthModule,
     DashboardModule,
