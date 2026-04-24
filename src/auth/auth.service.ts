@@ -44,6 +44,7 @@ import { AuthUserPayload } from './types/auth-user.type';
 
 import { LoginRateLimitService } from './login-rate-limit.service';
 import { UserRole } from '../types/prisma.types';
+import { FraudService } from '../fraud/fraud.service';
 
 type JwtPayload = {
   sub: string;
@@ -72,6 +73,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
     private readonly rateLimitService: LoginRateLimitService,
+    private readonly fraudService: FraudService,
   ) {
     this.jwtSecret = this.configService.get<string>('JWT_SECRET') ?? 'propchain-access-secret';
     this.jwtRefreshSecret =
@@ -183,6 +185,8 @@ export class AuthService {
         userAgent,
       );
 
+      await this.fraudService.evaluateFailedLogin(data.email, ipAddress, userAgent);
+
       if (shouldLock) {
         const lockoutDuration = 30;
         await this.emailService.sendAccountLockedEmail(user.email, lockoutDuration).catch((err) => {
@@ -234,10 +238,25 @@ export class AuthService {
     // Record successful login
     await this.rateLimitService.recordSuccessfulAttempt(data.email, ipAddress, userAgent);
     await this.recordLoginHistory(user.id, ipAddress, userAgent);
+    await this.fraudService.evaluateSuccessfulLogin(user.id, ipAddress, userAgent);
 
-    const tokens = await this.issueTokenPair(user);
+    const refreshedUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!refreshedUser) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    if (refreshedUser.isBlocked) {
+      throw new UnauthorizedException(
+        'Your account has been blocked after a fraud review. Please contact support.',
+      );
+    }
+
+    const tokens = await this.issueTokenPair(refreshedUser, undefined, ipAddress, userAgent);
     return {
-      user: sanitizeUser(user),
+      user: sanitizeUser(refreshedUser),
       ...tokens,
     };
   }
@@ -258,6 +277,7 @@ export class AuthService {
       // TOKEN REUSE DETECTED! This is a potential attack
       // Mark the reuse and invalidate the entire token family
       await this.handleTokenReuse(blacklistedToken, payload.jti, ipAddress, userAgent);
+      await this.fraudService.handleTokenReuse(payload.sub, payload.jti, ipAddress, userAgent);
 
       this.logger.error(
         `Refresh token reuse detected for user ${payload.sub} (JTI: ${payload.jti}, Family: ${payload.family}). IP: ${ipAddress}`,
@@ -295,7 +315,7 @@ export class AuthService {
     });
 
     // Issue new token pair with SAME family ID
-    const tokens = await this.issueTokenPair(user, payload.family);
+    const tokens = await this.issueTokenPair(user, payload.family, ipAddress, userAgent);
 
     this.logger.log(
       `Token rotated for user ${user.id} (${user.email}). Family: ${payload.family}. IP: ${ipAddress}`,

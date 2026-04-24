@@ -8,6 +8,15 @@ export interface EmailOptions {
   text?: string;
 }
 
+export interface FraudAlertEmailPayload {
+  alertId: string;
+  pattern: string;
+  severity: string;
+  title: string;
+  description: string;
+  userEmail?: string | null;
+}
+
 @Injectable()
 export class EmailService {
   constructor(private readonly configService: ConfigService) {}
@@ -79,6 +88,36 @@ export class EmailService {
     };
 
     await this.sendEmail(emailOptions);
+  }
+
+  async sendFraudAlertEmail(recipients: string[], payload: FraudAlertEmailPayload): Promise<void> {
+    await Promise.all(
+      recipients.map((recipient) =>
+        this.sendEmail({
+          to: recipient,
+          subject: `[Fraud Alert][${payload.severity}] ${payload.title}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #d9534f;">Fraud Alert Triggered</h2>
+              <p><strong>Alert ID:</strong> ${payload.alertId}</p>
+              <p><strong>Pattern:</strong> ${payload.pattern}</p>
+              <p><strong>Severity:</strong> ${payload.severity}</p>
+              <p><strong>User:</strong> ${payload.userEmail ?? 'Unknown'}</p>
+              <p><strong>Summary:</strong> ${payload.description}</p>
+            </div>
+          `,
+          text: `
+Fraud Alert Triggered
+
+Alert ID: ${payload.alertId}
+Pattern: ${payload.pattern}
+Severity: ${payload.severity}
+User: ${payload.userEmail ?? 'Unknown'}
+Summary: ${payload.description}
+          `.trim(),
+        }),
+      ),
+    );
   }
 
   private async sendEmail(options: EmailOptions): Promise<void> {

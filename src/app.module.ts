@@ -19,6 +19,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { AppController } from './app.controller';
 import './common/common.types'; // Load registered enums
 import { AdminModule } from './admin/admin.module';
+import { FraudModule } from './fraud/fraud.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -46,6 +47,7 @@ import { AdminModule } from './admin/admin.module';
     TrustScoreModule,
     PropertiesModule,
     AdminModule,
+    FraudModule,
     DocumentsModule,
     IntegrationsModule,
   ],

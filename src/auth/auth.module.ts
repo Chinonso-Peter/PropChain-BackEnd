@@ -13,9 +13,10 @@ import { RolesGuard } from './guards/roles.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { RateLimitHeadersInterceptor } from './interceptors/rate-limit-headers.interceptor';
 import { RateLimitAdminController } from './controllers/rate-limit-admin.controller';
+import { FraudModule } from '../fraud/fraud.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, SessionsModule, EmailModule],
+  imports: [PrismaModule, UsersModule, SessionsModule, EmailModule, FraudModule],
   controllers: [AuthController, RateLimitAdminController],
   providers: [
     AuthService,

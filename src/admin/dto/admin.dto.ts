@@ -11,6 +11,12 @@ import {
   Min,
 } from 'class-validator';
 import {
+  FraudAlertsQueryDto,
+  ReviewFraudAlertDto,
+  AddFraudInvestigationNoteDto,
+  BlockFraudUserDto,
+} from '../../fraud/dto/fraud.dto';
+import {
   PropertyStatus,
   TransactionStatus,
   TransactionType,
@@ -132,3 +138,10 @@ export class TransactionMonitoringQueryDto {
   @Max(100)
   limit: number = 20;
 }
+
+export {
+  AddFraudInvestigationNoteDto,
+  BlockFraudUserDto,
+  FraudAlertsQueryDto,
+  ReviewFraudAlertDto,
+};

@@ -7,11 +7,15 @@ import { AuthUserPayload } from '../auth/types/auth-user.type';
 import { UserRole } from '../types/prisma.types';
 import { AdminService } from './admin.service';
 import {
+  AddFraudInvestigationNoteDto,
   AdminUpdateUserDto,
   AdminUsersQueryDto,
+  BlockFraudUserDto,
   BulkModerationDto,
   FlagPropertyDto,
+  FraudAlertsQueryDto,
   ModerationQueueQueryDto,
+  ReviewFraudAlertDto,
   TransactionMonitoringQueryDto,
 } from './dto/admin.dto';
 
@@ -79,5 +83,57 @@ export class AdminController {
   @Get('transactions/monitoring/summary')
   monitorTransactionsSummary() {
     return this.adminService.transactionMonitoringSummary();
+  }
+
+  @Get('fraud/alerts')
+  listFraudAlerts(@Query() query: FraudAlertsQueryDto) {
+    return this.adminService.listFraudAlerts(query);
+  }
+
+  @Get('fraud/alerts/summary')
+  getFraudAlertsSummary() {
+    return this.adminService.getFraudAlertsSummary();
+  }
+
+  @Get('fraud/alerts/:id')
+  getFraudAlertDetails(@Param('id') alertId: string) {
+    return this.adminService.getFraudAlertDetails(alertId);
+  }
+
+  @Patch('fraud/alerts/:id')
+  reviewFraudAlert(
+    @Param('id') alertId: string,
+    @Body() payload: ReviewFraudAlertDto,
+    @CurrentUser() user: AuthUserPayload,
+  ) {
+    return this.adminService.reviewFraudAlert(alertId, payload, user.sub);
+  }
+
+  @Post('fraud/alerts/:id/notes')
+  addFraudAlertNote(
+    @Param('id') alertId: string,
+    @Body() payload: AddFraudInvestigationNoteDto,
+    @CurrentUser() user: AuthUserPayload,
+  ) {
+    return this.adminService.addFraudAlertNote(alertId, payload, user.sub);
+  }
+
+  @Post('fraud/alerts/:id/block-user')
+  blockFraudUser(
+    @Param('id') alertId: string,
+    @Body() payload: BlockFraudUserDto,
+    @CurrentUser() user: AuthUserPayload,
+  ) {
+    return this.adminService.blockFraudUser(alertId, user.sub, payload);
+  }
+
+  @Post('fraud/users/:id/scan')
+  scanUserForFraud(@Param('id') userId: string, @CurrentUser() user: AuthUserPayload) {
+    return this.adminService.scanUserForFraud(userId, user.sub);
+  }
+
+  @Post('fraud/properties/:id/scan')
+  scanPropertyForFraud(@Param('id') propertyId: string, @CurrentUser() user: AuthUserPayload) {
+    return this.adminService.scanPropertyForFraud(propertyId, user.sub);
   }
 }

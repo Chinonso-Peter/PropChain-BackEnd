@@ -1,18 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import {
+  AddFraudInvestigationNoteDto,
   AdminUpdateUserDto,
   AdminUsersQueryDto,
+  BlockFraudUserDto,
   BulkModerationAction,
   BulkModerationDto,
+  FraudAlertsQueryDto,
   ModerationQueueQueryDto,
+  ReviewFraudAlertDto,
   TransactionMonitoringQueryDto,
 } from './dto/admin.dto';
 import { PropertyStatus } from '../types/prisma.types';
+import { FraudService } from '../fraud/fraud.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fraudService: FraudService,
+  ) {}
 
   async getDashboard() {
     const [totalUsers, blockedUsers, totalProperties, pendingProperties, activeProperties] =
@@ -289,5 +297,37 @@ export class AdminService {
       failed,
       totalCompletedValue: aggregateValue._sum.amount ?? 0,
     };
+  }
+
+  async listFraudAlerts(query: FraudAlertsQueryDto) {
+    return this.fraudService.listAlerts(query);
+  }
+
+  async getFraudAlertsSummary() {
+    return this.fraudService.getAlertSummary();
+  }
+
+  async getFraudAlertDetails(alertId: string) {
+    return this.fraudService.getAlertDetails(alertId);
+  }
+
+  async reviewFraudAlert(alertId: string, payload: ReviewFraudAlertDto, actorId: string) {
+    return this.fraudService.reviewAlert(alertId, payload, actorId);
+  }
+
+  async addFraudAlertNote(alertId: string, payload: AddFraudInvestigationNoteDto, actorId: string) {
+    return this.fraudService.addInvestigationNote(alertId, payload, actorId);
+  }
+
+  async blockFraudUser(alertId: string, actorId: string, payload?: BlockFraudUserDto) {
+    return this.fraudService.blockUserFromAlert(alertId, actorId, payload);
+  }
+
+  async scanUserForFraud(userId: string, actorId: string) {
+    return this.fraudService.runUserScan(userId, actorId);
+  }
+
+  async scanPropertyForFraud(propertyId: string, actorId: string) {
+    return this.fraudService.runPropertyScan(propertyId, actorId);
   }
 }
